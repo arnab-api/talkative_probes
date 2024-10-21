@@ -14,7 +14,8 @@ from tqdm import tqdm
 
 from src.models import ModelandTokenizer, is_llama_variant
 from src.tokens import find_token_range, prepare_input
-from src.utils.env_utils import CLAUDE_CACHE_DIR, GPT_4O_CACHE_DIR
+
+# from src.utils.env_utils import CLAUDE_CACHE_DIR, GPT_4O_CACHE_DIR
 from src.utils.typing import PredictedToken, Tokenizer, TokenizerOutput
 
 logger = logging.getLogger(__name__)
@@ -390,101 +391,101 @@ def guess_subject(prompt):
     ].strip()
 
 
-def ask_gpt4o(
-    prompt: str,
-) -> str:
-    ##################################################
-    client = OpenAI(
-        api_key=os.getenv("OPENAI_KEY"),
-    )
-    MODEL_NAME = "gpt-4o"
-    ##################################################
+# def ask_gpt4o(
+#     prompt: str,
+# ) -> str:
+#     ##################################################
+#     client = OpenAI(
+#         api_key=os.getenv("OPENAI_KEY"),
+#     )
+#     MODEL_NAME = "gpt-4o"
+#     ##################################################
 
-    hash_val = hashlib.md5(prompt.encode()).hexdigest()
-    if f"{hash_val}.json" in os.listdir(GPT_4O_CACHE_DIR):
-        logger.debug(f"found cached gpt4o response for {hash_val} - loading")
-        with open(os.path.join(GPT_4O_CACHE_DIR, f"{hash_val}.json"), "r") as f:
-            json_data = json.load(f)
-            return json_data["response"]
+#     hash_val = hashlib.md5(prompt.encode()).hexdigest()
+#     if f"{hash_val}.json" in os.listdir(GPT_4O_CACHE_DIR):
+#         logger.debug(f"found cached gpt4o response for {hash_val} - loading")
+#         with open(os.path.join(GPT_4O_CACHE_DIR, f"{hash_val}.json"), "r") as f:
+#             json_data = json.load(f)
+#             return json_data["response"]
 
-    response = client.chat.completions.create(
-        model=MODEL_NAME,
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": prompt},
-        ],
-        temperature=0,
-        max_tokens=4000,
-    )
-    response = response.choices[0].message.content
+#     response = client.chat.completions.create(
+#         model=MODEL_NAME,
+#         messages=[
+#             {"role": "system", "content": "You are a helpful assistant."},
+#             {"role": "user", "content": prompt},
+#         ],
+#         temperature=0,
+#         max_tokens=4000,
+#     )
+#     response = response.choices[0].message.content
 
-    with open(os.path.join(GPT_4O_CACHE_DIR, f"{hash_val}.json"), "w") as f:
-        json.dump(
-            {
-                "prompt": prompt,
-                "response": response,
-                "model": MODEL_NAME,
-                "hash": hash_val,
-                "tempraure": 0,
-            },
-            f,
-        )
+#     with open(os.path.join(GPT_4O_CACHE_DIR, f"{hash_val}.json"), "w") as f:
+#         json.dump(
+#             {
+#                 "prompt": prompt,
+#                 "response": response,
+#                 "model": MODEL_NAME,
+#                 "hash": hash_val,
+#                 "tempraure": 0,
+#             },
+#             f,
+#         )
 
-    return response
-
-
-def ask_claude(
-    prompt: str,
-) -> str:
-    ##################################################
-    client = Anthropic(
-        api_key=os.getenv("CLAUDE_KEY"),
-    )
-    MODEL_NAME = "claude-3-5-sonnet-20240620"
-    ##################################################
-
-    hash_val = hashlib.md5(prompt.encode()).hexdigest()
-    if f"{hash_val}.json" in os.listdir(CLAUDE_CACHE_DIR):
-        logger.debug(f"found cached gpt4o response for {hash_val} - loading")
-        with open(os.path.join(CLAUDE_CACHE_DIR, f"{hash_val}.json"), "r") as f:
-            json_data = json.load(f)
-            return json_data["response"]
-
-    response = client.messages.create(
-        model="claude-3-5-sonnet-20240620",
-        max_tokens=4000,
-        temperature=0,
-        system="You are a helpful assistant.",
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": prompt,
-                    }
-                ],
-            }
-        ],
-    )
-    response = response.content[0].text
-
-    with open(os.path.join(CLAUDE_CACHE_DIR, f"{hash_val}.json"), "w") as f:
-        json.dump(
-            {
-                "prompt": prompt,
-                "response": response,
-                "model": MODEL_NAME,
-                "hash": hash_val,
-                "tempraure": 0,
-            },
-            f,
-        )
-
-    return response
+#     return response
 
 
-ASK_MODEL = {"gpt4o": ask_gpt4o, "claude": ask_claude}
+# def ask_claude(
+#     prompt: str,
+# ) -> str:
+#     ##################################################
+#     client = Anthropic(
+#         api_key=os.getenv("CLAUDE_KEY"),
+#     )
+#     MODEL_NAME = "claude-3-5-sonnet-20240620"
+#     ##################################################
+
+#     hash_val = hashlib.md5(prompt.encode()).hexdigest()
+#     if f"{hash_val}.json" in os.listdir(CLAUDE_CACHE_DIR):
+#         logger.debug(f"found cached gpt4o response for {hash_val} - loading")
+#         with open(os.path.join(CLAUDE_CACHE_DIR, f"{hash_val}.json"), "r") as f:
+#             json_data = json.load(f)
+#             return json_data["response"]
+
+#     response = client.messages.create(
+#         model="claude-3-5-sonnet-20240620",
+#         max_tokens=4000,
+#         temperature=0,
+#         system="You are a helpful assistant.",
+#         messages=[
+#             {
+#                 "role": "user",
+#                 "content": [
+#                     {
+#                         "type": "text",
+#                         "text": prompt,
+#                     }
+#                 ],
+#             }
+#         ],
+#     )
+#     response = response.content[0].text
+
+#     with open(os.path.join(CLAUDE_CACHE_DIR, f"{hash_val}.json"), "w") as f:
+#         json.dump(
+#             {
+#                 "prompt": prompt,
+#                 "response": response,
+#                 "model": MODEL_NAME,
+#                 "hash": hash_val,
+#                 "tempraure": 0,
+#             },
+#             f,
+#         )
+
+#     return response
+
+
+# ASK_MODEL = {"gpt4o": ask_gpt4o, "claude": ask_claude}
 
 
 def free_gpu_cache():

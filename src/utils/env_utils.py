@@ -11,8 +11,8 @@ ENV_DATA_DIR = "RELATIONS_DATA_DIR"
 ENV_MODELS_DIR = "RELATIONS_MODELS_DIR"
 ENV_RESULTS_DIR = "RELATIONS_RESULTS_DIR"
 ENV_HPARAMS_DIR = "RELATIONS_HPARAMS_DIR"
-GPT_4O_CACHE_DIR = "GPT4O_CACHE_DIR"
-CLAUDE_CACHE_DIR = "CLAUDE_CACHE_DIR"
+# GPT_4O_CACHE_DIR = "GPT4O_CACHE_DIR"
+# CLAUDE_CACHE_DIR = "CLAUDE_CACHE_DIR"
 
 logger = logging.getLogger(__name__)
 
@@ -24,16 +24,16 @@ try:
         DEFAULT_DATA_DIR = os.path.join(PROJECT_ROOT, config["DATA_DIR"])
         DEFAULT_RESULTS_DIR = os.path.join(PROJECT_ROOT, config["RESULTS_DIR"])
         DEFAULT_HPARAMS_DIR = os.path.join(PROJECT_ROOT, config["HPARAMS_DIR"])
-        GPT_4O_CACHE_DIR = os.path.join(PROJECT_ROOT, config["GPT4O_CACHE_DIR"])
-        CLAUDE_CACHE_DIR = os.path.join(PROJECT_ROOT, config["CLAUDE_CACHE_DIR"])
+        # GPT_4O_CACHE_DIR = os.path.join(PROJECT_ROOT, config["GPT4O_CACHE_DIR"])
+        # CLAUDE_CACHE_DIR = os.path.join(PROJECT_ROOT, config["CLAUDE_CACHE_DIR"])
 
         for dir in [
             DEFAULT_MODELS_DIR,
             DEFAULT_DATA_DIR,
             DEFAULT_RESULTS_DIR,
             DEFAULT_HPARAMS_DIR,
-            GPT_4O_CACHE_DIR,
-            CLAUDE_CACHE_DIR,
+            # GPT_4O_CACHE_DIR,
+            # CLAUDE_CACHE_DIR,
         ]:
             if not os.path.exists(dir):
                 os.makedirs(dir)
@@ -51,8 +51,8 @@ Other defaults are set to:
     DEFAULT_DATA_DIR = "data"
     DEFAULT_RESULTS_DIR = "results"
     DEFAULT_HPARAMS_DIR = "hparams"
-    GPT_4O_CACHE_DIR = "gpt4o_cache"
-    CLAUDE_CACHE_DIR = "claude_cache"
+    # GPT_4O_CACHE_DIR = "gpt4o_cache"
+    # CLAUDE_CACHE_DIR = "claude_cache"
 
 PathLike = Union[str, pathlib.Path]
 
