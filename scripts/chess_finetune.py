@@ -15,6 +15,7 @@ from transformers import get_linear_schedule_with_warmup
 from torch.utils.data import DataLoader
 import wandb
 from tqdm import tqdm
+import random, json
 
 logger = logging.getLogger(__name__)
 logger.info(f"{torch.__version__=}, {torch.version.cuda=}")
@@ -28,13 +29,18 @@ class PGNDataset(torch.utils.data.Dataset):
     def __init__(self, pgn_ds, tokenizer):
         self.pgn_ds = pgn_ds
         self.tokenizer = tokenizer
+        with open(
+            os.path.join(env_utils.DEFAULT_DATA_DIR, "pgn_paraphrases.json")
+        ) as f:
+            self.pgn_paraphrases = json.load(f)
 
     def __len__(self):
         return len(self.pgn_ds)
 
     def __getitem__(self, idx):
         item = self.pgn_ds[idx]
-        text = item["transcript"]
+        text = random.choice(self.pgn_paraphrases) + item["transcript"]
+        # return text
         inputs = self.tokenizer(
             text,
             return_tensors="pt",
@@ -94,7 +100,8 @@ def chess_finetune(
     train_dataset = PGNDataset(pgn_ds["train"], tokenizer=mt.tokenizer)
     test_dataset = PGNDataset(pgn_ds["test"], tokenizer=mt.tokenizer)
 
-    wiki_ds = load_dataset("wikimedia/wikipedia", "20231101.en")
+    # wiki_ds = load_dataset("wikimedia/wikipedia", "20231101.en")
+    wiki_ds = load_dataset("roneneldan/TinyStories")
     wiki_ds = wiki_ds["train"].train_test_split(test_size=0.1)
 
     train_wiki = WikiDataset(wiki_ds["train"], tokenizer=mt.tokenizer)
@@ -157,12 +164,13 @@ def chess_finetune(
         },
     )
 
-    for step, batch in enumerate(tqdm(train_loader, desc="Training")):
+    for step in tqdm(range(limit_training_steps), desc="Training"):
         optimizer.zero_grad()
 
-        input_ids = batch["input_ids"].to(device)
-        attention_mask = batch["attention_mask"].to(device)
-        labels = batch["labels"].to(device)
+        chess_batch = next(iter(train_loader))
+        input_ids = chess_batch["input_ids"].to(device)
+        attention_mask = chess_batch["attention_mask"].to(device)
+        labels = chess_batch["labels"].to(device)
 
         pgn_outputs = model(
             input_ids=input_ids, attention_mask=attention_mask, labels=labels
@@ -181,7 +189,7 @@ def chess_finetune(
         )
         wiki_loss = wiki_outputs.loss
 
-        loss = chess_loss + wiki_loss
+        loss = chess_loss + 0.5 * wiki_loss
 
         loss.backward()
         optimizer.step()
