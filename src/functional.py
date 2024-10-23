@@ -92,7 +92,7 @@ def patchscope(
     | tuple[list[PredictedToken], dict[int, tuple[int, PredictedToken]]]
 ):
     placeholder = "placeholder"
-    copy_prompt = f"cat -> cat; hello -> hello; Microsoft -> Microsoft; copy -> copy; {placeholder} ->"
+    copy_prompt = f"cat -> cat; hello -> hello; copy -> copy; {placeholder} ->"
     input = prepare_input(
         tokenizer=mt,
         prompts=copy_prompt,
