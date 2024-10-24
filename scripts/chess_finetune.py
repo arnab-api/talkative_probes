@@ -39,7 +39,11 @@ class PGNDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         item = self.pgn_ds[idx]
-        text = random.choice(self.pgn_paraphrases) + item["transcript"]
+        text = (
+            random.choice(self.pgn_paraphrases)
+            + item["transcript"]
+            + self.tokenizer.eos_token
+        )
         # return text
         inputs = self.tokenizer(
             text,
@@ -63,7 +67,7 @@ class WikiDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         item = self.pgn_ds[idx]
-        text = item["text"]
+        text = item["text"] + self.tokenizer.eos_token
         inputs = self.tokenizer(
             text,
             return_tensors="pt",

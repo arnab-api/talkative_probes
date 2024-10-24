@@ -508,3 +508,65 @@ def get_dummy_input(
 ):
     dummy_prompt = "The quick brown fox"
     return prepare_input(prompts=dummy_prompt, tokenizer=tokenizer)
+
+
+@torch.inference_mode()
+def get_concept_latents(
+    mt: ModelandTokenizer,
+    queries: list[tuple[str, str]],
+    interested_layers: list[str],
+):
+    last_location = (mt.layer_names[-1], -1)
+    all_latents = []
+    for ques, ans in tqdm(queries):
+        inputs = prepare_input(
+            prompts=ques,
+            tokenizer=mt,
+            return_offset_mapping=True,
+        )
+
+        query_end = (
+            find_token_range(
+                string=ques,
+                substring=".",
+                tokenizer=mt,
+                occurrence=-1,
+                offset_mapping=inputs["offset_mapping"][0],
+            )[1]
+            - 1
+        )
+
+        hs = get_hs(
+            mt=mt,
+            input=inputs,
+            locations=[(layer, query_end) for layer in interested_layers]
+            + [last_location],
+            return_dict=True,
+        )
+
+        top_prediction = logit_lens(mt=mt, h=hs[last_location])[0]
+
+        query = ques.split("\n")[-1]
+        # logger.debug(f"{query} | {top_prediction.token=} | {ans=}")
+
+        if top_prediction.token != ans:
+            continue
+
+        latents = {layer: hs[(layer, query_end)] for layer in interested_layers}
+
+        all_latents.append(
+            dict(
+                question=ques,
+                question_tokenized=[
+                    mt.tokenizer.decode(t) for t in inputs["input_ids"][0]
+                ],
+                answer=ans,
+                prediction=top_prediction,
+                query_token_idx=query_end,
+                latents=latents,
+            )
+        )
+
+    logger.debug(f"Collected {len(all_latents)} latents, out of {len(queries)}")
+
+    return all_latents
