@@ -8,8 +8,8 @@ from dataclasses import dataclass
 from typing import Any, Literal, Optional, Union
 
 import torch
-from anthropic import Anthropic
-from openai import OpenAI
+# from anthropic import Anthropic
+# from openai import OpenAI
 from tqdm import tqdm
 
 from src.models import ModelandTokenizer, is_llama_variant
@@ -47,7 +47,7 @@ def interpret_logits(
 def logit_lens(
     mt: ModelandTokenizer,
     h: torch.Tensor,
-    interested_tokens: list[int] = [],
+    interested_tokens: tuple[int] = (),
     k: int = 5,
 ) -> (
     list[PredictedToken]
@@ -84,41 +84,44 @@ def logit_lens(
 def patchscope(
     mt: ModelandTokenizer,
     h: torch.Tensor,
-    layer_idx: 10,
-    interested_tokens: list[int] = [],
+    target_prompt: str,
+    placeholder_token: str = "placeholder",
+    layer_idx: int = 10,
+    interested_tokens: tuple[int] = (),
     k: int = 5,
 ) -> (
     list[PredictedToken]
     | tuple[list[PredictedToken], dict[int, tuple[int, PredictedToken]]]
 ):
-    placeholder = "placeholder"
-    copy_prompt = f"cat -> cat; hello -> hello; Microsoft -> Microsoft; copy -> copy; {placeholder} ->"
     input = prepare_input(
         tokenizer=mt,
-        prompts=copy_prompt,
+        prompts=target_prompt,
         return_offset_mapping=True,
     )
-    placeholder_range = find_token_range(
-        string=copy_prompt,
-        substring=placeholder,
-        tokenizer=mt.tokenizer,
-        occurrence=-1,
-        offset_mapping=input["offset_mapping"][0],
-    )
-    placeholder_pos = placeholder_range[1] - 1
+    patches = []
+    for i in range(target_prompt.count(placeholder_token)):
+        placeholder_range = find_token_range(
+            string=target_prompt,
+            substring=placeholder_token,
+            tokenizer=mt.tokenizer,
+            occurrence=i,
+            offset_mapping=input["offset_mapping"][0],
+        )
+        placeholder_pos = placeholder_range[1] - 1
+        logger.debug(
+            f"placeholder position: {placeholder_pos} | token: {mt.tokenizer.decode(input['input_ids'][0, placeholder_pos])}"
+        )
+        patches.append(PatchSpec(
+            location=(mt.layer_name_format.format(layer_idx), placeholder_pos),
+            patch=h,
+        ))
     input.pop("offset_mapping")
-    logger.debug(
-        f"placeholder position: {placeholder_pos} | token: {mt.tokenizer.decode(input['input_ids'][0, placeholder_pos])}"
-    )
 
     processed_h = get_hs(
         mt=mt,
         input=input,
         locations=[(mt.layer_names[-1], -1)],
-        patches=PatchSpec(
-            location=(mt.layer_name_format.format(layer_idx), placeholder_pos),
-            patch=h,
-        ),
+        patches=patches,
         return_dict=False,
     )
     return logit_lens(
