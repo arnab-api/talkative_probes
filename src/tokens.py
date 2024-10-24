@@ -47,12 +47,13 @@ def prepare_offset_mapping(string, tokenized, special_tokens):
     # logger.debug(f"{special_tokens}")
     offset_mapping = []
     end = 0
+    # print(tokenized)
     for token in tokenized:
-        if token in special_tokens:
-            offset_mapping.append((end, end))
-            continue
         # print(f"{string[end:].find(token)} | {end=}, {token=}, {string[end:]}")
         next_tok_idx = string[end:].find(token)
+        if token in special_tokens and next_tok_idx == -1:
+            offset_mapping.append((end, end))
+            continue
         assert next_tok_idx != -1, f"{token} not found in {string[end:]}"
         assert next_tok_idx in [
             0,
