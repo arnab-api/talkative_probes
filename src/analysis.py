@@ -125,6 +125,7 @@ class LinearProbe(torch.nn.Module):
         validation_set: tuple[
             jaxtyping.Float32[torch.Tensor, "batch features"], list[str | int]
         ] = None,
+        print_logs=True,
     ):
         acts = acts.to(device)
         class_map = get_class_map(labels)
@@ -156,7 +157,7 @@ class LinearProbe(torch.nn.Module):
                 optimizer.step()
                 step += 1
 
-                if step % log_steps == 0:
+                if print_logs and step % log_steps == 0:
                     log_msg = f"Epoch {epoch + 1}/{epochs}, Loss: {loss.item()}"
                     if validation_set is not None:
                         val_x, val_y = validation_set
@@ -169,5 +170,5 @@ class LinearProbe(torch.nn.Module):
         if validation_set is not None:
             val_x, val_y = validation_set
             val_acc = probe.validate(val_x, val_y, batch_size)
-            logger.info(f"Final Validation Accuracy: {val_acc:.4f}")
+            logger.info(f"{probe.name} validation accuracy: {val_acc:.4f}")
         return probe
