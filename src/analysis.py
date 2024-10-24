@@ -1,5 +1,6 @@
 import torch
 import logging
+import jaxtyping
 
 logger = logging.getLogger(__name__)
 
@@ -33,3 +34,140 @@ class PCA:
     def fit_transform(self, X: torch.Tensor) -> torch.Tensor:
         self.fit(X)
         return self.transform(X)  # Return the transformed data
+
+
+def get_class_map(labels: list[str | int]):
+    return {label: idx for idx, label in enumerate(set(labels))}
+
+
+class LinearProbe(torch.nn.Module):
+    def __init__(self, input_dim, n_classes, class_map=None, name="LinearProbe"):
+        super(LinearProbe, self).__init__()
+        self.linear = torch.nn.Linear(input_dim, n_classes, bias=False)
+        torch.nn.init.kaiming_normal_(self.linear.weight)
+        self.class_head = torch.nn.Softmax(dim=-1)
+        self.class_map = class_map
+        self.name = name
+
+    def forward(self, x):
+        logits = self.linear(x)
+        proba = self.class_head(logits)
+        return proba
+
+    @torch.inference_mode()
+    def predict(
+        self, x: jaxtyping.Float32[torch.Tensor, "batch features"], map_labels=True
+    ):
+        self.eval()
+        outputs = self(x)
+        _, predicted = torch.max(outputs, dim=-1)
+        if map_labels:
+            return [list(self.class_map.keys())[i] for i in predicted.tolist()]
+        return predicted
+
+    @torch.inference_mode()
+    def validate(
+        self,
+        x: jaxtyping.Float32[torch.Tensor, "batch features"],
+        y: list[str | int],
+        batch_size=None,
+    ):
+        self.eval()
+        y = torch.tensor([self.class_map[label] for label in y]).to(x.device)
+        batch_size = batch_size or len(x)
+        correct = 0
+        total = 0
+        for i in range(0, len(x), batch_size):
+            batch_x = x[i : i + batch_size]
+            batch_y = y[i : i + batch_size]
+            outputs = self(batch_x)
+            _, predicted = torch.max(outputs, dim=-1)
+            correct += (predicted == batch_y).sum().item()
+            total += batch_y.size(0)
+        return correct / total
+
+    def save(self, path):
+        torch.save(
+            {
+                "name": self.name,
+                "class_map": self.class_map,
+                "model_state_dict": self.state_dict(),
+            },
+            path,
+        )
+
+    @property
+    def device(self):
+        return next(self.parameters()).device
+
+    @staticmethod
+    def from_pretained(path):
+        pt = torch.load(path)
+        shape = pt["model_state_dict"]["linear.weight"].shape
+        probe = LinearProbe(input_dim=shape[1], n_classes=shape[0])
+        probe.name = pt["name"]
+        probe.class_map = pt["class_map"]
+        probe.load_state_dict(pt["model_state_dict"])
+
+        return probe
+
+    @staticmethod
+    def from_data(
+        acts: jaxtyping.Float32[torch.Tensor, "batch features"],
+        labels: list[str | int],
+        lr=0.0001,
+        weight_decay=0.01,
+        epochs=1000,
+        batch_size=None,
+        log_steps=100,
+        device: torch.device = "cuda",
+        name: str = "LinearProbe",
+        validation_set: tuple[
+            jaxtyping.Float32[torch.Tensor, "batch features"], list[str | int]
+        ] = None,
+    ):
+        acts = acts.to(device)
+        class_map = get_class_map(labels)
+
+        probe = LinearProbe(
+            input_dim=acts.shape[1], n_classes=len(class_map), name=name
+        ).to(device)
+        probe.class_map = class_map
+
+        labels = torch.tensor([class_map[label] for label in labels]).to(device)
+
+        optimizer = torch.optim.AdamW(
+            probe.parameters(), lr=lr, weight_decay=weight_decay
+        )
+        criterion = torch.nn.CrossEntropyLoss()
+
+        batch_size = batch_size or len(acts)
+        step = 0
+        for epoch in range(epochs):
+            probe.train()
+            for i in range(0, len(acts), batch_size):
+                batch_acts = acts[i : i + batch_size]
+                batch_labels = labels[i : i + batch_size]
+
+                optimizer.zero_grad()
+                outputs = probe(batch_acts)
+                loss = criterion(outputs, batch_labels)
+                loss.backward()
+                optimizer.step()
+                step += 1
+
+                if step % log_steps == 0:
+                    log_msg = f"Epoch {epoch + 1}/{epochs}, Loss: {loss.item()}"
+                    if validation_set is not None:
+                        val_x, val_y = validation_set
+                        val_acc = probe.validate(val_x, val_y, batch_size)
+                        log_msg += f", Validation Accuracy: {val_acc:.4f}"
+
+                    logger.debug(log_msg)
+
+        probe.eval()
+        if validation_set is not None:
+            val_x, val_y = validation_set
+            val_acc = probe.validate(val_x, val_y, batch_size)
+            logger.info(f"Final Validation Accuracy: {val_acc:.4f}")
+        return probe
