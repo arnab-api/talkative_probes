@@ -319,7 +319,7 @@ def get_hs(
     layer_names = [layer_name for layer_name, _ in locations]
     layer_names = list(set(layer_names))
     layer_states = {layer_name: torch.empty(0) for layer_name in layer_names}
-    with mt.trace(input, scan=True) as tracer:
+    with mt.trace(input, scan=False) as tracer:
         if patches is not None:
             for cur_patch in patches:
                 module_name, index = cur_patch.location

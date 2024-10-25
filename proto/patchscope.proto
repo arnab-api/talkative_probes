@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+message PatchscopeConfig {
+  // If there are fewer source layers than target layers, source layers will be tiled
+  // into target layers. For example, if there is only 1 source layer, it will be patched
+  // into all target layers.
+  repeated int32 source_layers = 1;
+  // If target layers is empty, they will be the same as source layers
+  repeated int32 target_layers = 2;
+}
+
+message DecoderConfig {
+  string name = 1;
+}
+
+message EvaluationConfig {
+  string model_key = 1;
+  string dataset = 2;
+  string target_prompt = 3;
+  map<string, string> label_to_token = 4;
+  PatchscopeConfig patchscope_config = 5;
+  DecoderConfig decoder_config = 6;
+}
+
+message EvaluationResult {
+  string result_set_name = 1;
+  EvaluationConfig config = 2;
+  double accuracy = 3;
+  int64 num_correct = 4;
+  int64 num_evaluated = 5;
+}
+
+message EvaluationResults {
+  repeated EvaluationResult results = 1;
+}

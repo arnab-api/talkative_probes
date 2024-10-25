@@ -1,4 +1,5 @@
 import json
+import csv
 import logging
 import os
 import random
@@ -24,7 +25,9 @@ GMT_PATH = os.path.join(DEFAULT_DATA_DIR, "gmt")
 
 GMT_DATA_FILES = [
     "sp_en_trans.csv",
+    "neg_sp_en_trans.csv",
     "cities.csv",
+    "neg_cities.csv",
     "smaller_than.csv",
     "larger_than.csv",
     "common_claim_true_false.csv",
@@ -44,13 +47,14 @@ class GMTDataset(DataClassJsonMixin):
         self,
         examples: list[tuple[str, bool]],
         name: str = "GMT Dataset",
-        _few_shot: list | None = None,
+        few_shot: bool = True,
     ):
         self.examples = examples
         self.name = name
-        self._few_shot = _few_shot
+        self._few_shot = []
+        self._few_shot_prefix = ""
 
-        if _few_shot is None:
+        if few_shot:
             self.select_few_shot(3)
 
         logger.info(f"initialized {self.name} with {len(self.examples)} examples.")
@@ -110,6 +114,7 @@ class GMTDataset(DataClassJsonMixin):
         files=str | list[str],
         name: str = "GMT Dataset",
         shuffle: bool = True,
+        few_shot: bool = True,
     ):
         if isinstance(files, str):
             files = [files]
@@ -123,4 +128,20 @@ class GMTDataset(DataClassJsonMixin):
 
         if shuffle:
             random.shuffle(examples)
-        return GMTDataset(examples, name)
+        return GMTDataset(examples, name, few_shot=few_shot)
+    
+    @staticmethod
+    def simple_get_examples(
+        filename: str,
+        shuffle: bool = True,
+    ):
+        examples = []
+        with open(os.path.join(GMT_PATH, filename)) as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                examples.append((row["statement"], row["label"]))
+        
+        if shuffle:
+            random.shuffle(examples)
+
+        return examples
