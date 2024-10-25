@@ -53,7 +53,7 @@ class GMTDataset(DataClassJsonMixin):
         if _few_shot is None:
             self.select_few_shot(3)
 
-        logger.debug(f"initialized {self.name} with {len(self.examples)} examples.")
+        logger.info(f"initialized {self.name} with {len(self.examples)} examples.")
 
     def select_few_shot(self, n: int):
         if self._few_shot is not None:

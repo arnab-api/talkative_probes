@@ -1,7 +1,7 @@
 """Some useful type aliases relevant to this project."""
 
 import pathlib
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Literal, Optional, Sequence
 
 import numpy
@@ -10,6 +10,7 @@ import transformers
 import transformers.modeling_outputs
 from dataclasses_json import DataClassJsonMixin
 from nnsight import LanguageModel
+
 
 ArrayLike = list | tuple | numpy.ndarray | torch.Tensor
 PathLike = str | pathlib.Path
@@ -52,3 +53,34 @@ class PredictedToken(DataClassJsonMixin):
 
     def __str__(self) -> str:
         return f'"{self.token}" (p={self.prob:.3f})'
+
+
+@dataclass(frozen=False)
+class LatentCache(DataClassJsonMixin):
+    question: str
+    question_tokenized: list[str]
+    answer: str
+    prediction: PredictedToken
+    query_token_idx: int
+    latents: dict[str, ArrayLike]
+
+
+@dataclass(frozen=False)
+class LatentCacheCollection(DataClassJsonMixin):
+    """A collection of latent caches."""
+
+    latents: list[LatentCache] = field(default_factory=list)
+
+    def detensorize(self):
+        for latent in self.latents:
+            for key, value in latent.latents.items():
+                if isinstance(value, torch.Tensor) or isinstance(value, numpy.ndarray):
+                    latent.latents[key] = value.tolist()
+
+    def retensorize(self, device: torch.device | None = None):
+        if device is None:
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        for latent in self.latents:
+            for key, value in latent.latents.items():
+                if isinstance(value, list):
+                    latent.latents[key] = torch.tensor(value).to(device)

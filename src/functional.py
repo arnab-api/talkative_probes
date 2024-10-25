@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Any, Literal, Optional, Union
 
 import torch
+import copy
 
 # from anthropic import Anthropic
 # from openai import OpenAI
@@ -17,7 +18,7 @@ from src.models import ModelandTokenizer, is_llama_variant
 from src.tokens import find_token_range, prepare_input
 
 # from src.utils.env_utils import CLAUDE_CACHE_DIR, GPT_4O_CACHE_DIR
-from src.utils.typing import PredictedToken, Tokenizer, TokenizerOutput
+from src.utils.typing import PredictedToken, Tokenizer, TokenizerOutput, LatentCache
 
 logger = logging.getLogger(__name__)
 
@@ -519,7 +520,7 @@ def get_concept_latents(
     queries: list[tuple[str, str]],
     interested_layers: list[str],
     check_answer: bool = True,
-):
+) -> list[LatentCache]:
     last_location = (mt.layer_names[-1], -1)
     all_latents = []
     for ques, ans in tqdm(queries):
@@ -552,13 +553,13 @@ def get_concept_latents(
         if check_answer:
             # query = ques.split("\n")[-1]
             # logger.debug(f"{query} | {top_prediction.token=} | {ans=}")
-            if top_prediction.token != ans:
+            if top_prediction.token.strip().lower() != ans.strip().lower():
                 continue
 
         latents = {layer: hs[(layer, query_end)] for layer in interested_layers}
 
         all_latents.append(
-            dict(
+            LatentCache(
                 question=ques,
                 question_tokenized=[
                     mt.tokenizer.decode(t) for t in inputs["input_ids"][0]
@@ -573,3 +574,21 @@ def get_concept_latents(
     logger.debug(f"Collected {len(all_latents)} latents, out of {len(queries)}")
 
     return all_latents
+
+
+# useful for saving with jsons
+def detensorize(inp: dict[Any, Any] | list[dict[Any, Any]]):
+    if isinstance(inp, list):
+        return [detensorize(i) for i in inp]
+    inp = copy.deepcopy(inp)
+    for k in inp:
+        if isinstance(inp[k], dict):
+            inp[k] = detensorize(inp[k])
+        elif isinstance(inp[k], torch.Tensor):
+            if len(inp[k].shape) == 0:
+                inp[k] = inp[k].item()
+            else:
+                inp[k] = inp[k].tolist()
+
+    free_gpu_cache()
+    return inp
