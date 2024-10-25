@@ -84,10 +84,9 @@ def logit_lens(
 @torch.inference_mode()
 def patchscope(
     mt: ModelandTokenizer,
-    h: torch.Tensor,
+    hs: dict[str, torch.Tensor],
     target_prompt: str,
     placeholder_token: str = "placeholder",
-    layer_idx: int = 10,
     interested_tokens: tuple[int] = (),
     k: int = 5,
 ) -> (
@@ -101,23 +100,24 @@ def patchscope(
     )
     patches = []
     for i in range(target_prompt.count(placeholder_token)):
-        placeholder_range = find_token_range(
-            string=target_prompt,
-            substring=placeholder_token,
-            tokenizer=mt.tokenizer,
-            occurrence=i,
-            offset_mapping=input["offset_mapping"][0],
-        )
-        placeholder_pos = placeholder_range[1] - 1
-        logger.debug(
-            f"placeholder position: {placeholder_pos} | token: {mt.tokenizer.decode(input['input_ids'][0, placeholder_pos])}"
-        )
-        patches.append(
-            PatchSpec(
-                location=(mt.layer_name_format.format(layer_idx), placeholder_pos),
-                patch=h,
+        for layer, h in hs.items():
+            placeholder_range = find_token_range(
+                string=target_prompt,
+                substring=placeholder_token,
+                tokenizer=mt.tokenizer,
+                occurrence=i,
+                offset_mapping=input["offset_mapping"][0],
             )
-        )
+            placeholder_pos = placeholder_range[1] - 1
+            logger.debug(
+                f"placeholder position: {placeholder_pos} | token: {mt.tokenizer.decode(input['input_ids'][0, placeholder_pos])}"
+            )
+            patches.append(
+                PatchSpec(
+                    location=(layer, placeholder_pos),
+                    patch=h,
+                )
+            )
     input.pop("offset_mapping")
 
     processed_h = get_hs(
@@ -290,7 +290,7 @@ def get_hs(
     locations: tuple[str, int] | list[tuple[str, int]],
     patches: Optional[PatchSpec | list[PatchSpec]] = None,
     return_dict: bool = False,
-) -> dict[tuple[str, int], torch.Tensor]:
+) -> torch.Tensor | dict[tuple[str, int], torch.Tensor]:
 
     if isinstance(input, TokenizerOutput):
         if "offset_mapping" in input:
