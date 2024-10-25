@@ -27,30 +27,34 @@ def get_top_interested_token(result_dict):
 
 class PatchscopeRunner():
     def __init__(self,
-                 mt: ModelandTokenizer,
+                 encoder_mt: ModelandTokenizer,
+                 decoder_mt: ModelandTokenizer | None,
                  config: patchscope_pb2.PatchscopeConfig,
                  interested_tokens: list[str]):
-        self.mt = mt
+        self.encoder_mt = encoder_mt
+        self.decoder_mt = encoder_mt if decoder_mt is None else decoder_mt
         self.config = config
-        self.interested_tokens = [mt.tokenizer.encode(t)[-1] for t in interested_tokens]
+        self.interested_tokens = [encoder_mt.tokenizer.encode(t)[-1] for t in interested_tokens]
         # print("Interested tokens:")
-        # print([mt.tokenizer.decode(t) for t in self.interested_tokens])
+        # print([encoder_mt.tokenizer.decode(t) for t in self.interested_tokens])
 
     def run(self, source_prompt: str, target_prompt: str) -> PredictedToken:
         if len(self.config.target_layers) == 0:
             self.config.target_layers.extend(self.config.source_layers)
         assert len(self.config.source_layers) <= len(self.config.target_layers)
 
-        source_input = tokens.prepare_input(source_prompt, self.mt)
+        source_input = tokens.prepare_input(source_prompt, self.encoder_mt)
 
-        source_hs = get_source_hs(self.mt, source_input, self.config.source_layers)
+        source_hs = get_source_hs(self.encoder_mt, source_input, self.config.source_layers)
         target_hs = {}
         for i, target_layer in enumerate(self.config.target_layers):
             source_layer = self.config.source_layers[i % len(self.config.source_layers)]
-            target_hs[self.mt.layer_name_format.format(target_layer)] = source_hs[self.mt.layer_name_format.format(source_layer)]
+            target_layer_name = self.decoder_mt.layer_name_format.format(target_layer)
+            source_layer_name = self.encoder_mt.layer_name_format.format(source_layer)
+            target_hs[target_layer_name] = source_hs[source_layer_name]
 
         _, result_dict = functional.patchscope(
-            mt = self.mt,
+            mt = self.decoder_mt,
             hs = target_hs,
             target_prompt = target_prompt,
             interested_tokens = self.interested_tokens,
@@ -60,10 +64,12 @@ class PatchscopeRunner():
 
 class EvaluationRunner():
     def __init__(self,
-                 mt: ModelandTokenizer,
-                 config: patchscope_pb2.EvaluationConfig):
+                 config: patchscope_pb2.EvaluationConfig,
+                 encoder_mt: ModelandTokenizer,
+                 decoder_mt: ModelandTokenizer | None = None):
         self.config = config
-        self.patchscope_runner = PatchscopeRunner(mt,
+        self.patchscope_runner = PatchscopeRunner(encoder_mt,
+                                                  decoder_mt,
                                                   config.patchscope_config,
                                                   dict(config.label_to_token).values())
 

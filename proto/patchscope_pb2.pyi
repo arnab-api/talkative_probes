@@ -13,8 +13,14 @@ class PatchscopeConfig(_message.Message):
     target_layers: _containers.RepeatedScalarFieldContainer[int]
     def __init__(self, source_layers: _Optional[_Iterable[int]] = ..., target_layers: _Optional[_Iterable[int]] = ...) -> None: ...
 
+class DecoderConfig(_message.Message):
+    __slots__ = ("name",)
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    def __init__(self, name: _Optional[str] = ...) -> None: ...
+
 class EvaluationConfig(_message.Message):
-    __slots__ = ("model_key", "dataset", "target_prompt", "label_to_token", "patchscope_config")
+    __slots__ = ("model_key", "dataset", "target_prompt", "label_to_token", "patchscope_config", "decoder_config")
     class LabelToTokenEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -27,12 +33,14 @@ class EvaluationConfig(_message.Message):
     TARGET_PROMPT_FIELD_NUMBER: _ClassVar[int]
     LABEL_TO_TOKEN_FIELD_NUMBER: _ClassVar[int]
     PATCHSCOPE_CONFIG_FIELD_NUMBER: _ClassVar[int]
+    DECODER_CONFIG_FIELD_NUMBER: _ClassVar[int]
     model_key: str
     dataset: str
     target_prompt: str
     label_to_token: _containers.ScalarMap[str, str]
     patchscope_config: PatchscopeConfig
-    def __init__(self, model_key: _Optional[str] = ..., dataset: _Optional[str] = ..., target_prompt: _Optional[str] = ..., label_to_token: _Optional[_Mapping[str, str]] = ..., patchscope_config: _Optional[_Union[PatchscopeConfig, _Mapping]] = ...) -> None: ...
+    decoder_config: DecoderConfig
+    def __init__(self, model_key: _Optional[str] = ..., dataset: _Optional[str] = ..., target_prompt: _Optional[str] = ..., label_to_token: _Optional[_Mapping[str, str]] = ..., patchscope_config: _Optional[_Union[PatchscopeConfig, _Mapping]] = ..., decoder_config: _Optional[_Union[DecoderConfig, _Mapping]] = ...) -> None: ...
 
 class EvaluationResult(_message.Message):
     __slots__ = ("result_set_name", "config", "accuracy", "num_correct", "num_evaluated")

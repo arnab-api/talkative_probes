@@ -9,12 +9,17 @@ message PatchscopeConfig {
   repeated int32 target_layers = 2;
 }
 
+message DecoderConfig {
+  string name = 1;
+}
+
 message EvaluationConfig {
   string model_key = 1;
   string dataset = 2;
   string target_prompt = 3;
   map<string, string> label_to_token = 4;
   PatchscopeConfig patchscope_config = 5;
+  DecoderConfig decoder_config = 6;
 }
 
 message EvaluationResult {
