@@ -1,4 +1,5 @@
 import json
+import csv
 import logging
 import os
 import random
@@ -128,3 +129,19 @@ class GMTDataset(DataClassJsonMixin):
         if shuffle:
             random.shuffle(examples)
         return GMTDataset(examples, name, few_shot=few_shot)
+    
+    @staticmethod
+    def simple_get_examples(
+        filename: str,
+        shuffle: bool = True,
+    ):
+        examples = []
+        with open(os.path.join(GMT_PATH, filename)) as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                examples.append((row["statement"], row["label"]))
+        
+        if shuffle:
+            random.shuffle(examples)
+
+        return examples

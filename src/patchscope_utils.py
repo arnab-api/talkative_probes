@@ -6,6 +6,7 @@ import src.functional as functional
 import src.tokens as tokens
 from src.utils.typing import PredictedToken
 from src.models import ModelandTokenizer
+import proto.patchscope_pb2 as patchscope_pb2
 
 def get_source_hs(mt, input_, layers):
     locations = [(mt.layer_name_format.format(layer), input_.input_ids.shape[1] - 1)
@@ -24,19 +25,10 @@ def get_top_interested_token(result_dict):
             top_predicted = pred_token
     return top_predicted
 
-@dataclass
-class PatchscopeConfig:
-    # If there are fewer source layers than target layers, source layers will be tiled
-    # into target layers. For example, if there is only 1 source layer, it will be patched
-    # into all target layers.
-    source_layers: list[int]
-    # If target layers is None, they will be the same as source layers
-    target_layers: list[int] | None
-
 class PatchscopeRunner():
     def __init__(self,
                  mt: ModelandTokenizer,
-                 config: PatchscopeConfig,
+                 config: patchscope_pb2.PatchscopeConfig,
                  interested_tokens: list[str]):
         self.mt = mt
         self.config = config
@@ -45,8 +37,8 @@ class PatchscopeRunner():
         # print([mt.tokenizer.decode(t) for t in self.interested_tokens])
 
     def run(self, source_prompt: str, target_prompt: str) -> PredictedToken:
-        if self.config.target_layers is None:
-            self.config.target_layers = self.config.source_layers
+        if len(self.config.target_layers) == 0:
+            self.config.target_layers.extend(self.config.source_layers)
         assert len(self.config.source_layers) <= len(self.config.target_layers)
 
         source_input = tokens.prepare_input(source_prompt, self.mt)
@@ -65,28 +57,18 @@ class PatchscopeRunner():
             k = 5)
         return get_top_interested_token(result_dict)
 
-@dataclass
-class EvaluationConfig:
-    model_key: str
-    dataset: str
-    target_prompt: str
-    label_to_token: dict[Any, str]
-    patchscope_config: PatchscopeConfig
-
-@dataclass
-class EvaluationResult:
-    evaluation_config: EvaluationConfig
-    accuracy: float
-
 
 class EvaluationRunner():
-    def __init__(self, mt: ModelandTokenizer, config: EvaluationConfig):
+    def __init__(self,
+                 mt: ModelandTokenizer,
+                 config: patchscope_pb2.EvaluationConfig):
         self.config = config
         self.patchscope_runner = PatchscopeRunner(mt,
                                                   config.patchscope_config,
-                                                  config.label_to_token.values())
+                                                  dict(config.label_to_token).values())
 
-    def evaluate(self, examples: list[tuple[str, any]]) -> float:
+    def evaluate(self,
+                 examples: list[tuple[str, any]]) -> float:
         num_correct = 0
         num_total = 0
         for example, label in tqdm(examples):
@@ -96,5 +78,8 @@ class EvaluationRunner():
                 num_correct += 1
             num_total += 1
         accuracy = num_correct / num_total
-        return EvaluationResult(evaluation_config=self.config,
-                                accuracy=accuracy)
+        return patchscope_pb2.EvaluationResult(
+            config=self.config,
+            accuracy=accuracy,
+            num_correct=num_correct,
+            num_evaluated=num_total)
