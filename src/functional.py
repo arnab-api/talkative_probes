@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Any, Literal, Optional, Union
 
 import torch
+
 # from anthropic import Anthropic
 # from openai import OpenAI
 from tqdm import tqdm
@@ -111,10 +112,12 @@ def patchscope(
         logger.debug(
             f"placeholder position: {placeholder_pos} | token: {mt.tokenizer.decode(input['input_ids'][0, placeholder_pos])}"
         )
-        patches.append(PatchSpec(
-            location=(mt.layer_name_format.format(layer_idx), placeholder_pos),
-            patch=h,
-        ))
+        patches.append(
+            PatchSpec(
+                location=(mt.layer_name_format.format(layer_idx), placeholder_pos),
+                patch=h,
+            )
+        )
     input.pop("offset_mapping")
 
     processed_h = get_hs(
@@ -515,6 +518,7 @@ def get_concept_latents(
     mt: ModelandTokenizer,
     queries: list[tuple[str, str]],
     interested_layers: list[str],
+    check_answer: bool = True,
 ):
     last_location = (mt.layer_names[-1], -1)
     all_latents = []
@@ -545,12 +549,11 @@ def get_concept_latents(
         )
 
         top_prediction = logit_lens(mt=mt, h=hs[last_location])[0]
-
-        query = ques.split("\n")[-1]
-        # logger.debug(f"{query} | {top_prediction.token=} | {ans=}")
-
-        if top_prediction.token != ans:
-            continue
+        if check_answer:
+            # query = ques.split("\n")[-1]
+            # logger.debug(f"{query} | {top_prediction.token=} | {ans=}")
+            if top_prediction.token != ans:
+                continue
 
         latents = {layer: hs[(layer, query_end)] for layer in interested_layers}
 
