@@ -1,4 +1,5 @@
 import os
+import math
 import random
 import csv
 from dataclasses import dataclass
@@ -72,7 +73,7 @@ class DatasetManager:
         dataset.name : dataset
         for dataset in (
             GeometryOfTruthDatasetLoader.get_all_loaders() + [
-                SstDatasetLoader("sst2", "sst2")
+                SstDatasetLoader(group="sst2", name="sst2")
             ]
         )
     }
@@ -86,11 +87,17 @@ class DatasetManager:
 
     def split(self, proportions):
         assert sum(proportions) <= 1
-        remaining = None
-        if sum(proportions) < 1:
-            remaining = 1 - sum(proportions)
+        
+        start = 0
+        end = None
+        result = []
         for proportion in proportions:
-            pass
+            end = start + math.ceil(proportion * len(self.examples))
+            result.append(DatasetManager(self.examples[start:end],
+                                         self.batch_size,
+                                         shuffle=False))
+            start = end
+        return result
 
     def __len__(self):
         return (len(self.examples) + self.batch_size - 1) // self.batch_size
@@ -100,7 +107,7 @@ class DatasetManager:
             yield self.examples[i : i + self.batch_size]
 
     @staticmethod
-    def from_named_datasets(dataset_names, batch_size, shuffle=True):
+    def from_named_datasets(dataset_names, batch_size=1, shuffle=True):
         examples = []
         for name in dataset_names:
             dataset = DatasetManager.supported_datasets[name]
@@ -108,9 +115,9 @@ class DatasetManager:
         return DatasetManager(examples, batch_size, shuffle)
 
     @staticmethod
-    def from_dataset_group(group, *args):
+    def from_dataset_group(group, **kwargs):
         datasets = DatasetManager.list_datasets_by_group(group)
-        return DatasetManager.from_named_datasets(datasets[group], *args)
+        return DatasetManager.from_named_datasets(datasets[group], **kwargs)
 
     @staticmethod
     def list_datasets_by_group(group=None):
