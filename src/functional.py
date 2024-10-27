@@ -591,3 +591,95 @@ def detensorize(inp: dict[Any, Any] | list[dict[Any, Any]]):
 
     free_gpu_cache()
     return inp
+
+@torch.inference_mode()
+def get_concept_latents_simple(
+    mt: ModelandTokenizer,
+    queries: list[tuple[str, str]],
+    interested_layers: list[str],
+    check_answer: bool = True,
+):
+    # last_location = (mt.layer_names[-1], -1)
+    all_latents = []
+    for ques, ans in tqdm(queries):
+        inputs = prepare_input(
+            prompts=ques,
+            tokenizer=mt,
+            return_offset_mapping=True,
+        )
+
+        query_end = inputs["input_ids"].shape[-1] - 1
+
+        hs = get_hs(
+            mt=mt,
+            input=inputs,
+            locations=[(layer, query_end) for layer in interested_layers],
+            return_dict=True,
+        )
+
+        top_prediction = None
+
+        latents = {layer: hs[(layer, query_end)] for layer in interested_layers}
+
+        all_latents.append(
+            dict(
+                question=ques,
+                question_tokenized=[
+                    mt.tokenizer.decode(t) for t in inputs["input_ids"][0]
+                ],
+                answer=ans,
+                prediction=top_prediction,
+                query_token_idx=query_end,
+                latents=latents,
+            )
+        )
+
+    logger.debug(f"Collected {len(all_latents)} latents, out of {len(queries)}")
+
+    return all_latents
+
+@torch.inference_mode()
+def get_concept_latents_simple(
+    mt: ModelandTokenizer,
+    queries: list[tuple[str, str]],
+    interested_layers: list[str],
+    check_answer: bool = True,
+):
+    # last_location = (mt.layer_names[-1], -1)
+    all_latents = []
+    for ques, ans in tqdm(queries):
+        inputs = prepare_input(
+            prompts=ques,
+            tokenizer=mt,
+            return_offset_mapping=True,
+        )
+
+        query_end = inputs["input_ids"].shape[-1] - 1
+
+        hs = get_hs(
+            mt=mt,
+            input=inputs,
+            locations=[(layer, query_end) for layer in interested_layers],
+            return_dict=True,
+        )
+
+        top_prediction = None
+
+        latents = {layer: hs[(layer, query_end)] for layer in interested_layers}
+
+        all_latents.append(
+            dict(
+                question=ques,
+                question_tokenized=[
+                    mt.tokenizer.decode(t) for t in inputs["input_ids"][0]
+                ],
+                answer=ans,
+                prediction=top_prediction,
+                query_token_idx=query_end,
+                latents=latents,
+            )
+        )
+
+    logger.debug(f"Collected {len(all_latents)} latents, out of {len(queries)}")
+
+    return all_latents
