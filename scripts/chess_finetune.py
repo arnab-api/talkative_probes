@@ -24,6 +24,13 @@ logger.info(
 )
 logger.info(f"{transformers.__version__=}")
 
+import shutil
+
+
+def remove_dir(path):
+    if os.path.exists(path):
+        shutil.rmtree(path)
+
 
 class PGNDataset(torch.utils.data.Dataset):
     def __init__(self, pgn_ds, tokenizer):
@@ -228,7 +235,6 @@ def chess_finetune(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser = argparse.ArgumentParser()
     logging_utils.add_logging_args(parser)
     experiment_utils.add_experiment_args(parser)
     parser.add_argument(
@@ -248,7 +254,7 @@ if __name__ == "__main__":
     logging_utils.configure(args)
     experiment_utils.setup_experiment(args)
 
-    logger.info("args")
+    logger.info(args)
 
     chess_finetune(
         model_key=args.model,

@@ -548,7 +548,6 @@ def get_concept_latents(
             + [last_location],
             return_dict=True,
         )
-
         top_prediction = logit_lens(mt=mt, h=hs[last_location])[0]
         if check_answer:
             # query = ques.split("\n")[-1]

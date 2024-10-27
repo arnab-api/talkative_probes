@@ -84,3 +84,6 @@ class LatentCacheCollection(DataClassJsonMixin):
             for key, value in latent.latents.items():
                 if isinstance(value, list):
                     latent.latents[key] = torch.tensor(value).to(device)
+
+    def __len__(self):
+        return len(self.latents)
