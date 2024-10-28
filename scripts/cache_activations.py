@@ -38,7 +38,6 @@ def cache_activations(
         model_key=model_key,
         torch_dtype=torch.float32,
     )
-    interested_layers = [mt.layer_name_format(i) for i in interested_layer_indices]
 
     cache_dir = os.path.join(
         env_utils.DEFAULT_RESULTS_DIR,
@@ -65,7 +64,7 @@ def cache_activations(
             latents = get_batch_concept_activations(
                 mt=mt,
                 prompts=prompts,
-                interested_layers=interested_layers,
+                interested_layer_indices=interested_layer_indices,
                 check_prediction=None,  # will check the next token if passed | None if skipped
                 on_token_occur=None,  # always get activations at the last position
             )
