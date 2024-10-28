@@ -75,6 +75,7 @@ class SstDatasetLoader(DatasetLoader):
         return result
 
 
+# TODO (arnab): Remove some of the poor performing relations.
 RELATION_FILES_ROOT = os.path.join(DEFAULT_DATA_DIR, "relations")
 RELATION_NAMES = []
 for relation_type in os.listdir(RELATION_FILES_ROOT):
