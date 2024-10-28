@@ -49,6 +49,7 @@ def cache_activations(
     for group_name, dataset_name in dataset_names:
         group_dir = os.path.join(cache_dir, group_name)
         os.makedirs(group_dir, exist_ok=True)
+
         data_dir = os.path.join(group_dir, dataset_name)
         os.makedirs(data_dir, exist_ok=True)
 
@@ -57,19 +58,29 @@ def cache_activations(
             batch_size=batch_size,
         )
 
-        for batch_idx, batch in enumerate(dataloader):
+        for batch_idx, batch in tqdm(enumerate(dataloader)):
             prompts = [b.context for b in batch]
-
-            #! check `notebooks/test.ipynb` for example usage
             latents = get_batch_concept_activations(
                 mt=mt,
                 prompts=prompts,
                 interested_layer_indices=interested_layer_indices,
-                check_prediction=None,  # will check the next token if passed | None if skipped
-                on_token_occur=None,  # always get activations at the last position
+                check_prediction=None,
+                on_token_occur=None,
             )
+
+            correct_labels = [b.correct for b in batch]
+            incorrect_labels = [b.incorrect for b in batch]
+
+            for latent_cache, correct, incorrect in zip(
+                latents, correct_labels, incorrect_labels
+            ):
+                latent_cache.correct_label = correct
+                latent_cache.incorrect_label = incorrect
+                latent_cache.group = group_name
+
             lcc = LatentCacheCollection(latents=latents)
             lcc.detensorize()
+
             with open(os.path.join(data_dir, f"batch_{batch_idx}.json"), "w") as f:
                 f.write(lcc.to_json())
 
@@ -96,10 +107,16 @@ if __name__ == "__main__":
         nargs="+",
         help="The dataset to use for caching activations.",
         default=[
-            "relations|factual/country_capital_city",
-            "sst2|sst2",
-            "geometry_of_truth|cities",
+            # "relations|factual/country_capital_city",
+            # "sst2|sst2",
+            # "geometry_of_truth|cities",
         ],
+    )
+    parser.add_argument(
+        "--dataset_group",
+        type=str,
+        choices=["relations", "sst2", "geometry_of_truth"],
+        default=None,  # if specified wll override dataset
     )
     parser.add_argument(
         "--batch_size",
@@ -111,7 +128,13 @@ if __name__ == "__main__":
         "--interested_layers",
         type=str,
         help="The layers to cache activations for.",
-        default="5-20",
+        default="7-17",
+    )
+    parser.add_argument(
+        "--latent_cache_dir",
+        type=str,
+        help="The directory to save the latent caches.",
+        default="cached_latents",
     )
 
     args = parser.parse_args()
@@ -119,12 +142,22 @@ if __name__ == "__main__":
     experiment_utils.setup_experiment(args)
     logger.info(args)
 
+    assert args.dataset_group is not None or len(args.dataset) > 0
     interested_layers = list(map(int, args.interested_layers.split("-")))
-    dataset_names = [tuple(d.split("|")) for d in args.dataset]
+    if args.dataset_group is not None:
+        dataset_names = [
+            (args.dataset_group, d_name)
+            for d_name in DatasetManager.list_datasets_by_group()[args.dataset_group]
+        ]
+    else:
+        dataset_names = [tuple(d.split("|")) for d in args.dataset]
+
+    logger.info(f"{dataset_names=}")
 
     cache_activations(
         model_key=args.model,
         dataset_names=dataset_names,
         interested_layer_indices=interested_layers,
         batch_size=args.batch_size,
+        latent_cache_dir=args.latent_cache_dir,
     )

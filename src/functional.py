@@ -527,7 +527,7 @@ def get_concept_latents(
         inputs = prepare_input(
             prompts=ques,
             tokenizer=mt,
-            return_offset_mapping=True,
+            return_offsets_mapping=True,
         )
 
         query_end = (
@@ -730,7 +730,6 @@ def get_batch_concept_activations(
                         mt.tokenizer.decode(t)
                         for t in batch_inputs["input_ids"][idx].squeeze().tolist()
                     ],
-                    answer=None,
                     prediction=None,
                     query_token_idx=token_idx,
                     latents=cur_lantents,

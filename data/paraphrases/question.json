@@ -1,11 +1,16 @@
 {
-    "GMT": [
+    "geometry_of_truth": [
         "Is this statement {}?",
         "Is this {}?",
         "This statement is {}. Do you agree?"
     ],
-    "SST2": [
+    "sst2": [
         "This review is {}. Do you agree?",
         "This expresses {} sentiment. Is that correct?"
+    ],
+    "relations": [
+        "Is this statement {}?",
+        "Is this {}?",
+        "This statement is {}. Do you agree?"
     ]
 }

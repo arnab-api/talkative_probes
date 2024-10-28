@@ -36,14 +36,14 @@ class GeometryOfTruthDatasetLoader(DatasetLoader):
 
     DATASET_NAMES = [
         "sp_en_trans",
-        "neg_sp_en_trans",
+        # "neg_sp_en_trans",
         "cities",
         "neg_cities",
         "smaller_than",
         "larger_than",
         "common_claim_true_false",
         "companies_true_false",
-        "counterfact_true_false",
+        # "counterfact_true_false",
     ]
 
     def load(self):
@@ -162,8 +162,8 @@ class RelationDatasetLoader(DatasetLoader):
 
 
 class DatasetManager:
-    supported_datasets: dict[tuple[str,str], DatasetLoader] = {
-        (dataset.group, dataset.name) : dataset
+    supported_datasets: dict[tuple[str, str], DatasetLoader] = {
+        (dataset.group, dataset.name): dataset
         for dataset in (
             GeometryOfTruthDatasetLoader.get_all_loaders()
             + [SstDatasetLoader()]
@@ -213,13 +213,13 @@ class DatasetManager:
         names = datasets[group]
 
         return DatasetManager.from_named_datasets(
-            zip([group] * len(names), names),
-            **kwargs)
+            zip([group] * len(names), names), **kwargs
+        )
 
     @staticmethod
     def list_datasets_by_group(want_group=None):
         result = {}
-        for (group, name) in DatasetManager.supported_datasets:
+        for group, name in DatasetManager.supported_datasets:
             if want_group is not None and group != want_group:
                 continue
             if group not in result:
