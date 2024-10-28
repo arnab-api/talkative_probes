@@ -37,7 +37,7 @@ class DatasetLoader:
     def load(self) -> list[RawExample]:
         raise NotImplementedError
 
-    # If not overridden, the transformation does nothing.
+    # If not overridden, the transformation keeps the feature/label unchanged.
     def transform(self, example: RawExample) -> TransformedExample:
         return TransformedExample(feature=example.feature,
                                   label=example.label,
@@ -111,10 +111,11 @@ class SstDatasetLoader(DatasetLoader):
         super().__init__(SstDatasetLoader.GROUP_NAME, SstDatasetLoader.DATASET_NAME)
 
     def load(self):
-        dataset = load_dataset("stanfordnlp/sst2")["train"]
+        dataset = load_dataset("stanfordnlp/sst2")
         result = []
-        for sentence, label in zip(dataset["sentence"], dataset["label"]):
-            result.append(RawExample(feature=sentence, label=label))
+        for split in ("train", "validation", "test"):
+            for sentence, label in zip(dataset[split]["sentence"], dataset[split]["label"]):
+                result.append(RawExample(feature=sentence, label=label))
         return result
 
 
