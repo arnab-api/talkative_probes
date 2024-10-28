@@ -14,18 +14,10 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class RawExample:
-    feature: str
-    label: str
-
-@dataclass
-class TransformedExample:
-    feature: str = ""
-    label: str = ""
-    context: str = ""
-    query: str = ""
-    answer_prompt: str = ""
-    raw: RawExample | None = None
+class ContextAndAnswers:
+    context: str
+    correct: str
+    incorrect: str
 
 
 class DatasetLoader:
@@ -34,14 +26,8 @@ class DatasetLoader:
         self.name = name
     
     # Must be overridden by dataset class
-    def load(self) -> list[RawExample]:
+    def load(self) -> list[ContextAndAnswers]:
         raise NotImplementedError
-
-    # If not overridden, the transformation keeps the feature/label unchanged.
-    def transform(self, example: RawExample) -> TransformedExample:
-        return TransformedExample(feature=example.feature,
-                                  label=example.label,
-                                  raw=example)
 
 
 class GeometryOfTruthDatasetLoader(DatasetLoader):
@@ -60,46 +46,30 @@ class GeometryOfTruthDatasetLoader(DatasetLoader):
         "counterfact_true_false",
     ]
 
-    def __init__(self, group, name, paraphrases):
-        self.paraphrases = paraphrases
-        super().__init__(group, name)
-
     def load(self):
         examples = []
         filename = self.name + ".csv"
         with open(os.path.join(self.DATA_FILES_PATH, filename)) as f:
             reader = csv.DictReader(f)
             for row in reader:
-                example = RawExample(feature=row["statement"], label=row["label"])
+                correct, incorrect = {
+                    "0": ("false", "true"),
+                    "1": ("true", "false")
+                }[row["label"]]
+                example = ContextAndAnswers(
+                    context=row["statement"],
+                    correct=correct,
+                    incorrect=incorrect)
                 examples.append(example)
 
         return examples
 
-    def transform(self, example):
-        transformed = TransformedExample()
-        transformed.raw = example
-
-        transformed.context = example.feature
-        transformed.query = random.choice(self.paraphrases)
-
-        transformed.feature = example.feature + " " + transformed.query.format("true")
-
-        transformed.label = {
-            "0": "No",
-            "1": "Yes"
-        }[example.label]
-
-        return transformed
-
     @staticmethod
     def get_all_loaders():
-        with open(os.path.join(env_utils.DEFAULT_DATA_DIR, "paraphrases/question.json"), "r") as f:
-            paraphrases = json.load(f)["GMT"]
-
         loaders = []
         for name in GeometryOfTruthDatasetLoader.DATASET_NAMES:
             loaders.append(GeometryOfTruthDatasetLoader(
-                GeometryOfTruthDatasetLoader.GROUP_NAME, name, paraphrases))
+                GeometryOfTruthDatasetLoader.GROUP_NAME, name))
         return loaders
 
 
@@ -112,10 +82,18 @@ class SstDatasetLoader(DatasetLoader):
 
     def load(self):
         dataset = load_dataset("stanfordnlp/sst2")
+        breakpoint()
         result = []
-        for split in ("train", "validation", "test"):
+        for split in ("train", "validation"):
             for sentence, label in zip(dataset[split]["sentence"], dataset[split]["label"]):
-                result.append(RawExample(feature=sentence, label=label))
+                correct, incorrect = {
+                    0: ("negative", "positive"),
+                    1: ("positive", "negative")
+                }[label]
+                result.append(ContextAndAnswers(
+                    context=sentence.strip(),
+                    correct=correct,
+                    incorrect=incorrect))
         return result
 
 
@@ -141,7 +119,7 @@ class RelationDatasetLoader(DatasetLoader):
         )
         if not os.path.exists(file_path):
             logger.error(f"File not found: {file_path}")
-            return examples
+            return []
 
         examples = []
         with open(file_path, "r") as f:
@@ -152,16 +130,18 @@ class RelationDatasetLoader(DatasetLoader):
             for sample in data_dict["samples"]:
                 template = random.choice(prompt_templates) + " {}."
                 examples.append(
-                    RawExample(
-                        feature=template.format(sample["subject"], sample["object"]),
-                        label="1",
+                    ContextAndAnswers(
+                        context=template.format(sample["subject"], sample["object"]),
+                        correct="true",
+                        incorrect="false"
                     )
                 )
                 false_obj = random.choice(list(objects - {sample["object"]}))
                 examples.append(
-                    RawExample(
-                        feature=template.format(sample["subject"], false_obj),
-                        label="0",
+                    ContextAndAnswers(
+                        context=template.format(sample["subject"], false_obj),
+                        correct="false",
+                        incorrect="true"
                     )
                 )
         logger.info(f"Loaded {len(examples)} examples from {self.name}.")
@@ -187,9 +167,8 @@ class DatasetManager:
         )
     }
 
-    def __init__(self, examples, transformer, batch_size, shuffle):
+    def __init__(self, examples, batch_size, shuffle):
         self.examples = examples
-        self.transformer = transformer
         self.batch_size = batch_size
 
         if shuffle:
@@ -204,7 +183,6 @@ class DatasetManager:
         for proportion in proportions:
             end = start + math.ceil(proportion * len(self.examples))
             result.append(DatasetManager(self.examples[start:end],
-                                         self.transformer,
                                          self.batch_size,
                                          shuffle=False))
             start = end
@@ -213,12 +191,9 @@ class DatasetManager:
     def __len__(self):
         return (len(self.examples) + self.batch_size - 1) // self.batch_size
 
-    def _transform_batch(self, batch):
-        return [self.transformer(example) for example in batch]
-
     def __iter__(self):
         for i in range(0, len(self.examples), self.batch_size):
-            yield self._transform_batch(self.examples[i : i + self.batch_size])
+            yield self.examples[i : i + self.batch_size]
 
     @staticmethod
     def from_named_datasets(dataset_names, batch_size=1, shuffle=True):
@@ -226,7 +201,7 @@ class DatasetManager:
         for name in dataset_names:
             dataset = DatasetManager.supported_datasets[name]
             examples.extend(dataset.load())
-        return DatasetManager(examples, dataset.transform, batch_size, shuffle)
+        return DatasetManager(examples, batch_size, shuffle)
 
     @staticmethod
     def from_dataset_group(group, **kwargs):
