@@ -1,28 +1,22 @@
 import argparse
 import logging
 import os
-import time
-from typing import Optional
-
 import torch
 import transformers
-from datasets import load_dataset
-from dataclasses import dataclass, field, fields
-from src.functional import get_module_nnsight, get_concept_latents, free_gpu_cache
+from src.functional import get_module_nnsight, free_gpu_cache, interpret_logits
 from src.models import ModelandTokenizer
 from src.utils import env_utils, experiment_utils, logging_utils
 import shutil
 from transformers import get_linear_schedule_with_warmup
-from torch.utils.data import DataLoader
 import wandb
 from tqdm import tqdm
-import random, json
-from src.utils.typing import LatentCacheCollection
-from src.utils.typing import ArrayLike
-from typing import Literal
-from src.utils.typing import LatentCacheCollection
+import random
 from src.utils import env_utils
 import baukit
+from src.activation_manager import ActivationLoader, ActivationSample, get_batch_paths
+from src.tokens import prepare_input, find_token_range
+from src.functional import free_gpu_cache
+
 
 logger = logging.getLogger(__name__)
 logger.info(f"{torch.__version__=}, {torch.version.cuda=}")
@@ -31,110 +25,118 @@ logger.info(
 )
 logger.info(f"{transformers.__version__=}")
 
-from src.dataset import GMTDataset, GMT_DATA_FILES
 
-
-def remove_dir(path):
-    if os.path.exists(path):
-        logger.debug(f"Removing directory: {path}")
-        shutil.rmtree(path)
-
-
-@dataclass(frozen=True)
-class LatentSample:
-    activation: ArrayLike
-    prompt: str
-    label: Literal[" yes", " no"]
-
-    def __post_init__(self):
-        assert self.label in [" yes", " no"]
-        assert "#" in self.prompt
-
-
-class LatentSampleBuffer:
-    idx: int = 0
-
-    def __init__(
-        self,
-        activations: list[LatentSample],
-        batch_size: int = 32,
-    ):
-        self.activations = activations
-        self.batch_size = batch_size
-
-    def __len__(self):
-        return len(self.activations)
-
-    def __getitem__(self, idx):
-        return self.activations[idx]
-
-    def __iter__(self):
-        for i in range(0, len(self.activations), self.batch_size):
-            yield self.activations[i : i + self.batch_size]
-
-    def next_batch(self):
-        # return self.activations[self.idx : self.idx + self.batch_size]
-        if self.idx >= len(self.activations):
-            raise StopIteration
-        ret = self.activations[self.idx : self.idx + self.batch_size]
-        self.idx += self.batch_size
-        return ret
-
-
-with open(
-    os.path.join(env_utils.DEFAULT_DATA_DIR, "paraphrases/yes_no.json"), "r"
-) as f:
-    YES_NO_PARAPHRASES = json.load(f)
-
-with open(
-    os.path.join(env_utils.DEFAULT_DATA_DIR, "paraphrases/question.json"), "r"
-) as f:
-    QUESTION_PARAPHRASES = json.load(f)["GMT"]
-
-
-def get_latent_qa(yes_ans, no_ans) -> tuple[str, Literal[" yes", " no"]]:
-    label = random.choice([" yes", " no"])
-    ret = "# "
-    yes_no = random.choice(YES_NO_PARAPHRASES)
-    question = random.choice(QUESTION_PARAPHRASES)
-    question = question.format(yes_ans) if label == " yes" else question.format(no_ans)
-    ret += question + f" {yes_no}"
-    return ret, label
-
-
-from src.tokens import prepare_input, find_token_range
-from src.functional import interpret_logits, get_module_nnsight
-
-
-def prepare_batch_input(batch: list[LatentSample], mt: ModelandTokenizer):
-    batch_prompts = [b.prompt for b in batch]
+def prepare_batch_input(batch: list[ActivationSample], mt: ModelandTokenizer):
+    batch_prompts = [b.query for b in batch]
     batch_tokenized = prepare_input(
-        prompts=batch_prompts, tokenizer=mt, return_offset_mapping=True
+        prompts=batch_prompts, tokenizer=mt, return_offsets_mapping=True
     )
 
     int_tok_idx = []
     for idx in range(len(batch)):
-        offset_mapping = batch_tokenized["offset_mapping"][idx]
-        act_range = find_token_range(
-            string=batch[idx].prompt,
-            substring="#",
-            occurrence=0,
-            tokenizer=mt,
-            offset_mapping=offset_mapping,
-        )
-        int_tok_idx.append(act_range[1] - 1)
+        try:
+            offset_mapping = batch_tokenized["offset_mapping"][idx]
+            act_range = find_token_range(
+                string=batch[idx].query,
+                substring="#",
+                occurrence=0,
+                tokenizer=mt,
+                offset_mapping=offset_mapping,
+            )
+            int_tok_idx.append(act_range[1] - 1)
+        except:
+            logger.error(
+                f"can't find '#' in \"{batch[idx].query}\" ==> bad training data"
+            )
+            first_attn_token = batch_tokenized["attention_mask"].index(1) + 1
+            int_tok_idx.append(first_attn_token)
 
     batch_tokenized.pop("offset_mapping")
 
     return batch_tokenized, int_tok_idx
 
 
+@torch.inference_mode()
+def evaluate_batch(batch: list[ActivationSample], mt: ModelandTokenizer):
+    batch_tokenized, int_tok_idx = prepare_batch_input(batch, mt)
+    # logger.debug(f"{batch_tokenized.input_ids.shape=}")
+    activations = [b.activation for b in batch]
+
+    with mt.trace(batch_tokenized):
+        # patch activation at every layer
+        module_names = mt.layer_names
+        for idx, act, int_tok in zip(range(len(batch)), activations, int_tok_idx):
+            for module_name in module_names:
+                module = get_module_nnsight(mt, module_name)
+                module.output[0][idx, int_tok, :] = torch.tensor(act, device=mt.device)
+        last_logits = [mt.output.logits[idx, -1, :].save() for idx in range(len(batch))]
+        # output = mt.output.save() # do not save output, save some memory
+
+    last_logits = torch.stack(last_logits)
+
+    predicted_labels = [
+        interpret_logits(
+            tokenizer=mt,
+            logits=last_logits[idx],
+            # logits = output.logits[idx, -1, :],
+            k=2,
+        )[0]
+        for idx in range(len(batch))
+    ]
+
+    correct_labels = [b.label for b in batch]
+    correct_count = 0
+
+    for pred, correct in zip(predicted_labels, correct_labels):
+        # print(f"{str(pred)=} | {correct=}")
+        if pred.token.strip().lower() == correct.strip().lower():
+            correct_count += 1
+
+    free_gpu_cache()
+    return correct_count
+
+
+@torch.inference_mode()
+def evaluate(mt: ModelandTokenizer, eval_set: list[ActivationSample], batch_size=32):
+    correct_count = 0
+    total_count = 0
+    for i in tqdm(range(0, len(eval_set), batch_size), desc="Evaluating"):
+        batch = eval_set[i : i + batch_size]
+        with torch.no_grad():
+            correct_count += evaluate_batch(batch, mt)
+            total_count += len(batch)
+    return correct_count / total_count
+
+
+def get_validation_set(validate_act_loader: ActivationLoader, num: int = 200):
+    cur_eval_batch = []
+    cur_eval_loader = ActivationLoader(
+        latent_cache_files=random.choices(validate_act_loader.latent_cache_files, k=25),
+        batch_size=validate_act_loader.batch_size,
+    )
+    while True:
+        try:
+            cur_eval_batch.extend(cur_eval_loader.next_batch())
+        except StopIteration:
+            break
+    random.shuffle(cur_eval_batch)
+    cur_eval_batch = cur_eval_batch[:num]
+
+    return cur_eval_batch
+
+
+def remove_dir(path):
+    if os.path.exists(path):
+        shutil.rmtree(path)
+
+
 def patchscope_finetune(
     model_key: str,
     layers_of_interest: list[int] = list(range(8, 20)),
-    checkpoint_save_dir: str = "patchscope_tuning",
+    checkpoint_save_dir: str = "patchscope_test",
     num_final_layers_to_tune: int = 10,
     wandb_logging=True,
+    batch_size=32,
 ):
     # Initialize model and tokenizer
     mt = ModelandTokenizer(
@@ -147,11 +149,28 @@ def patchscope_finetune(
         model_key.split("/")[-1],
     )
 
+    ############################## Load Activation Loader ##############################
+    activation_batch_paths = list(get_batch_paths(latent_dir))
+    random.shuffle(activation_batch_paths)
+
+    train_split = int(len(activation_batch_paths) * 0.8)
+    train_act_batch_paths = activation_batch_paths[:train_split]
+    val_act_batch_paths = activation_batch_paths[train_split:]
+
+    train_act_loader = ActivationLoader(
+        latent_cache_files=train_act_batch_paths, batch_size=batch_size, shuffle=True
+    )
+
+    validate_act_loader = ActivationLoader(
+        latent_cache_files=val_act_batch_paths, batch_size=batch_size, shuffle=True
+    )
+
+    ############################## Load Activation Loader ##############################
+
     checkpoint_save_dir = os.path.join(
-        env_utils.DEFAULT_RESULTS_DIR, model_key.split("/")[-1], checkpoint_save_dir
+        env_utils.DEFAULT_RESULTS_DIR, checkpoint_save_dir, model_key.split("/")[-1]
     )
     os.makedirs(checkpoint_save_dir, exist_ok=True)
-
     model = mt._model
     model.train()
     ############################## Hyperparameters ##############################
@@ -193,171 +212,73 @@ def patchscope_finetune(
     )
     loss_func = torch.nn.CrossEntropyLoss()
 
-    logger.info(os.listdir(latent_dir))
+    for step in tqdm(range(limit_training_steps), desc="Training"):
+        optimizer.zero_grad()
 
-    num_steps = 0
-    for cached_file_name in os.listdir(latent_dir):
-        logger.info("-" * 100)
-        with open(os.path.join(latent_dir, cached_file_name), "r") as f:
-            dct = json.load(f)
-        lcc = LatentCacheCollection.from_dict(dct)
-        lcc.retensorize(device=mt.device)
-        logger.info(f"Loaded {len(lcc)} samples from {cached_file_name}")
+        try:
+            batch = train_act_loader.next_batch()
+        except StopIteration:
+            logger.info(f"End of training data at step {step + 1}")
+            break
 
-        latent_arr = []
-        layers_of_interest = list(range(8, 20))
+        batch_tokenized, int_tok_idx = prepare_batch_input(batch, mt)
 
-        for idx in range(len(lcc.latents)):
-            latent_cache = lcc.latents[idx]
-            prompt = latent_cache.context
-            label = latent_cache.answer
-            yes_ans = "true" if str(label).lower().strip() == "true" else "false"
-            no_ans = "false" if yes_ans == "true" else "true"
-            for layer_idx in layers_of_interest:
-                layer_name = mt.layer_name_format.format(layer_idx)
-                activation = latent_cache.latents[layer_name]
-                prompt, label = get_latent_qa(yes_ans, no_ans)
-                latent_arr.append(
-                    LatentSample(
-                        activation=activation,
-                        prompt=prompt,
-                        label=label,
-                    )
-                )
+        activations = [b.activation for b in batch]
 
-        # # debug
-        # latent_arr = random.sample(latent_arr, min(len(latent_arr), 1000))
+        with mt.trace(batch_tokenized):
+            # replace the latent on all the residual layers
+            module_names = mt.layer_names
+            for idx, act, int_tok in zip(range(len(batch)), activations, int_tok_idx):
+                for module_name in module_names:
+                    module = get_module_nnsight(mt, module_name)
+                    module.output[0][idx, int_tok, :] = torch.tensor(
+                        act, device=mt.device
+                    ).to(mt.dtype)
 
-        random.shuffle(latent_arr)
-        train_split = int(len(latent_arr) * 0.9)
-        train_buffer = LatentSampleBuffer(latent_arr[:train_split])
-        val_buffer = LatentSampleBuffer(latent_arr[train_split:])
-        logger.info(f"initialized tuning with {len(latent_arr)} examples")
-        logger.info(f"train buffer size: {len(train_buffer)}")
-
-        train_buffer_steps = len(train_buffer) // batch_size
-        for _ in tqdm(range(train_buffer_steps), desc="Training"):
-            optimizer.zero_grad()
-            num_steps += 1
-
-            try:
-                batch = train_buffer.next_batch()
-            except StopIteration:
-                train_buffer.idx = 0
-                batch = train_buffer.next_batch()
-
-            batch_tokenized, int_tok_idx = prepare_batch_input(batch, mt)
-            # logger.info(batch_tokenized.input_ids.shape)
-            activations = [b.activation for b in batch]
-
-            with mt.trace(batch_tokenized):
-                module_names = (
-                    mt.layer_names
-                )  # replace the latent on all the residual layers
-                for idx, act, int_tok in zip(
-                    range(len(batch)), activations, int_tok_idx
-                ):
-                    for module_name in module_names:
-                        module = get_module_nnsight(mt, module_name)
-                        module.output[0][idx, int_tok, :] = torch.tensor(
-                            act, device=mt.device
-                        ).to(mt.dtype)
-
-                # output = mt.output.save()
-                last_logits = [
-                    mt.output.logits[idx, -1, :].save() for idx in range(len(batch))
-                ]
-
-            last_logits = torch.stack(last_logits)
-            batch_labels = [mt.tokenizer(b.label).input_ids[-1] for b in batch]
-            batch_labels = torch.tensor(batch_labels, device=mt.device)
-
-            # Cross-entropy loss
-            patchscope_loss = loss_func(last_logits, batch_labels)
-
-            # TODO: include natural text and generation loss
-            loss = patchscope_loss
-
-            loss.backward()
-            # break
-            optimizer.step()
-            scheduler.step()
-
-            free_gpu_cache()
-
-            if num_steps % log_steps == 0:
-                log_data = {
-                    "loss": loss.item(),
-                    "learning_rate": scheduler.get_last_lr()[0],
-                }
-                logger.info(f"Step {num_steps}: {log_data}")
-                if wandb_logging:
-                    wandb.log(log_data)
-
-            if num_steps % checkpoint_interval == 0:
-                if len(os.listdir(checkpoint_save_dir)) > 0:
-                    last_checkpoint_path = os.path.join(
-                        checkpoint_save_dir, os.listdir(checkpoint_save_dir)[-1]
-                    )
-                    remove_dir(last_checkpoint_path)
-
-                new_checkpoint_path = os.path.join(
-                    checkpoint_save_dir, f"checkpoint-{num_steps}"
-                )
-                logger.info(
-                    f"|>> {num_steps=} <<| Saving checkpoint to {new_checkpoint_path}"
-                )
-                model.save_pretrained(new_checkpoint_path)
-
-        logger.info(f"Tuned with {cached_file_name}")
-
-        # Validation
-        correct_count = 0
-        val_label_counts = {label: 0 for label in ["yes", "no"]}
-        print("Validating ...")
-        for batch in val_buffer:
-            batch_tokenized, int_tok_idx = prepare_batch_input(batch, mt)
-            activations = [b.activation for b in batch]
-
-            with torch.no_grad():
-                with mt.trace(batch_tokenized):
-                    module_names = mt.layer_names
-                    for idx, act, int_tok in zip(
-                        range(len(batch)), activations, int_tok_idx
-                    ):
-                        for module_name in module_names:
-                            module = get_module_nnsight(mt, module_name)
-                            module.output[0][idx, int_tok, :] = torch.tensor(
-                                act, device=mt.device
-                            )
-                    last_logits = [
-                        mt.output.logits[idx, -1, :].save() for idx in range(len(batch))
-                    ]
-                    # output = mt.output.save()
-            last_logits = torch.stack(last_logits)
-
-            predicted_labels = [
-                interpret_logits(
-                    tokenizer=mt,
-                    logits=last_logits[idx],
-                    # logits = output.logits[idx, -1, :],
-                    k=2,
-                )[0]
-                for idx in range(len(batch))
+            # output = mt.output.save()
+            last_logits = [
+                mt.output.logits[idx, -1, :].save() for idx in range(len(batch))
             ]
-            correct_labels = [b.label for b in batch]
-            for pred, correct in zip(predicted_labels, correct_labels):
-                # print(
-                #     f"{pred.token.strip().lower() = } | {correct.strip().lower() = } | >> {pred.token.strip().lower() == correct.strip().lower()}"
-                # )
-                val_label_counts[correct.strip().lower()] += 1
-                if pred.token.strip().lower() == correct.strip().lower():
-                    correct_count += 1
 
-        logger.info(
-            f"Validation accuracy: {correct_count / len(val_buffer):.4f}, evaluated on {len(val_buffer)} samples {val_label_counts}"
-        )
-        logger.info("-" * 100)
+        last_logits = torch.stack(last_logits)
+        batch_labels = [mt.tokenizer(b.label).input_ids[-1] for b in batch]
+        batch_labels = torch.tensor(batch_labels, device=mt.device)
+
+        # Cross-entropy loss
+        patchscope_loss = loss_func(last_logits, batch_labels)
+
+        # TODO: include natural text and generation loss
+        loss = patchscope_loss
+
+        loss.backward()
+        optimizer.step()
+        scheduler.step()
+
+        free_gpu_cache()
+
+        if (step + 1) % log_steps == 0:
+            cur_eval_batch = get_validation_set(validate_act_loader, 500)
+            eval_accuracy = evaluate(mt, cur_eval_batch)
+            log_data = {
+                "loss": loss.item(),
+                "learning_rate": scheduler.get_last_lr()[0],
+                "eval_accuracy": eval_accuracy,
+            }
+            logger.info(f"Step {step + 1}: {log_data}")
+            if wandb_logging:
+                wandb.log(log_data)
+
+        if (step + 1) % checkpoint_interval == 0:
+            if len(os.listdir(checkpoint_save_dir)) > 0:
+                last_checkpoint_path = os.path.join(
+                    checkpoint_save_dir, os.listdir(checkpoint_save_dir)[-1]
+                )
+                remove_dir(last_checkpoint_path)
+
+            new_checkpoint_path = os.path.join(
+                checkpoint_save_dir, f"checkpoint-{step + 1}"
+            )
+            model.save_pretrained(new_checkpoint_path)
 
     logger.info("Finished training.")
     # Save the final model
@@ -366,10 +287,8 @@ def patchscope_finetune(
             checkpoint_save_dir, os.listdir(checkpoint_save_dir)[-1]
         )
         remove_dir(last_checkpoint_path)
-    logger.info(
-        f"Saving Final Tuned LM | >> {num_steps=} << | path={new_checkpoint_path}"
-    )
-    new_checkpoint_path = os.path.join(checkpoint_save_dir, f"checkpoint-{num_steps}")
+    logger.info(f"Saving Final Tuned LM | >> {step+1=} << | path={new_checkpoint_path}")
+    new_checkpoint_path = os.path.join(checkpoint_save_dir, f"checkpoint-{step + 1}")
     model.save_pretrained(new_checkpoint_path)
 
 
@@ -395,7 +314,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--checkpoint_save_dir",
         type=str,
-        default="patchscope",
+        default="patchscope_test",
         help="Directory to save checkpoints in results.",
     )
 
@@ -404,6 +323,13 @@ if __name__ == "__main__":
         type=int,
         default=10,
         help="Number of final layers to tune.",
+    )
+
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=32,
+        help="Batch size for training.",
     )
 
     args = parser.parse_args()
@@ -416,4 +342,5 @@ if __name__ == "__main__":
         checkpoint_save_dir=args.checkpoint_save_dir,
         num_final_layers_to_tune=args.num_final_layers_to_tune,
         wandb_logging=args.wandb_logging,
+        batch_size=args.batch_size,
     )
