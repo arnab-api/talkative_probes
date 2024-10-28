@@ -20,9 +20,12 @@ class RawExample:
 
 @dataclass
 class TransformedExample:
-    feature: str
-    label: str
-    raw: RawExample
+    feature: str = ""
+    label: str = ""
+    context: str = ""
+    query: str = ""
+    answer_prompt: str = ""
+    raw: RawExample | None = None
 
 
 class DatasetLoader:
@@ -73,16 +76,20 @@ class GeometryOfTruthDatasetLoader(DatasetLoader):
         return examples
 
     def transform(self, example):
-        label = random.choice([" yes", " no"])
-        label = {
+        transformed = TransformedExample()
+        transformed.raw = example
+
+        transformed.context = example.feature
+        transformed.query = random.choice(self.paraphrases)
+
+        transformed.feature = example.feature + " " + transformed.query.format("true")
+
+        transformed.label = {
             "0": "No",
             "1": "Yes"
         }[example.label]
 
-        question = random.choice(self.paraphrases)
-        feature = question.format()
-
-        return TransformedExample(feature, label, example)
+        return transformed
 
     @staticmethod
     def get_all_loaders():
@@ -112,7 +119,7 @@ class SstDatasetLoader(DatasetLoader):
 
 
 # TODO (arnab): Remove some of the poor performing relations.
-RELATION_FILES_ROOT = os.path.join(DEFAULT_DATA_DIR, "relations")
+RELATION_FILES_ROOT = os.path.join(env_utils.DEFAULT_DATA_DIR, "relations")
 RELATION_NAMES = []
 for relation_type in os.listdir(RELATION_FILES_ROOT):
     for file_name in os.listdir(os.path.join(RELATION_FILES_ROOT, relation_type)):
@@ -174,7 +181,7 @@ class DatasetManager:
         dataset.name : dataset
         for dataset in (
             GeometryOfTruthDatasetLoader.get_all_loaders()
-            + [SstDatasetLoader(group="sst2", name="sst2")]
+            + [SstDatasetLoader()]
             + RelationDatasetLoader.get_all_loaders()
         )
     }
