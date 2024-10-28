@@ -53,16 +53,13 @@ def cache_activations(
         data_dir = os.path.join(group_dir, dataset_name)
         os.makedirs(data_dir, exist_ok=True)
 
-        #! I am assuming that DatasetManager.get_loader(group_name, dataset_name) returns a DatasetLoader object
-        dataloader = DatasetManager.get_loader(
-            group_name,
-            dataset_name,
+        dataloader = DatasetManager.from_named_datasets(
+            [(group_name, dataset_name)],
             batch_size=batch_size,
         )
 
         for batch_idx, batch in enumerate(dataloader):
-            #! batch[i] = (context, correct_label, wrong_label)
-            prompts = [b[0] for b in batch]
+            prompts = [b.context for b in batch]
 
             #! check `notebooks/test.ipynb` for example usage
             latents = get_batch_concept_activations(

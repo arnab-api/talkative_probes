@@ -162,8 +162,8 @@ class RelationDatasetLoader(DatasetLoader):
 
 
 class DatasetManager:
-    supported_datasets: dict[str, DatasetLoader] = {
-        dataset.name: dataset
+    supported_datasets: dict[tuple[str,str], DatasetLoader] = {
+        (dataset.group, dataset.name) : dataset
         for dataset in (
             GeometryOfTruthDatasetLoader.get_all_loaders()
             + [SstDatasetLoader()]
@@ -202,34 +202,27 @@ class DatasetManager:
     @staticmethod
     def from_named_datasets(dataset_names, batch_size=1, shuffle=True):
         examples = []
-        for name in dataset_names:
-            dataset = DatasetManager.supported_datasets[name]
+        for group, name in dataset_names:
+            dataset = DatasetManager.supported_datasets[(group, name)]
             examples.extend(dataset.load())
         return DatasetManager(examples, batch_size, shuffle)
 
     @staticmethod
     def from_dataset_group(group, **kwargs):
         datasets = DatasetManager.list_datasets_by_group(group)
-        return DatasetManager.from_named_datasets(datasets[group], **kwargs)
+        names = datasets[group]
+
+        return DatasetManager.from_named_datasets(
+            zip([group] * len(names), names),
+            **kwargs)
 
     @staticmethod
-    def list_datasets_by_group(group=None):
+    def list_datasets_by_group(want_group=None):
         result = {}
-        for name, dataset in DatasetManager.supported_datasets.items():
-            if group is not None and dataset.group != group:
+        for (group, name) in DatasetManager.supported_datasets:
+            if want_group is not None and group != want_group:
                 continue
-            if dataset.group not in result:
-                result[dataset.group] = []
-            result[dataset.group].append(name)
+            if group not in result:
+                result[group] = []
+            result[group].append(name)
         return result
-
-    @staticmethod
-    def list_dataset_groups():
-        return list(
-            set(
-                [
-                    dataset.group
-                    for dataset in DatasetManager.supported_datasets.values()
-                ]
-            )
-        )
