@@ -8,6 +8,7 @@ import torch
 import transformers
 from nnsight import LanguageModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from src.utils.tokenization_utils import set_padding_side
 
 from src.models import ModelandTokenizer, determine_device, unwrap_tokenizer
 from src.utils.env_utils import DEFAULT_MODELS_DIR
@@ -72,14 +73,16 @@ def prepare_input(
     n_gen_per_prompt: int = 1,
     device: torch.device = "cpu",
     add_bos_token: bool = False,
-    return_offset_mapping=False,
+    return_offsets_mapping=False,
+    padding_side: Optional[Literal["left", "right"]] = None,
+    **kwargs,
 ) -> TokenizerOutput:
     """Prepare input for the model."""
     if isinstance(tokenizer, ModelandTokenizer):
         device = determine_device(
             tokenizer
         )  # if tokenizer type is ModelandTokenizer, get device and ignore the passed device
-    calculate_offsets = return_offset_mapping and (
+    calculate_offsets = return_offsets_mapping and (
         isinstance(tokenizer, ModelandTokenizer) and "llama-3" in tokenizer.name.lower()
     )
 
@@ -89,12 +92,16 @@ def prepare_input(
         prompts = [maybe_prefix_bos(tokenizer, p) for p in prompts]
     prompts = [p for p in prompts for _ in range(n_gen_per_prompt)]
 
-    inputs = tokenizer(
-        prompts,
-        return_tensors="pt",
-        padding="longest",
-        return_offsets_mapping=return_offset_mapping,
-    )
+    padding_side = padding_side or tokenizer.padding_side
+
+    with set_padding_side(tokenizer, padding_side):
+        inputs = tokenizer(
+            prompts,
+            return_tensors="pt",
+            padding="longest",
+            return_offsets_mapping=return_offsets_mapping,
+            **kwargs,
+        )
 
     if calculate_offsets:
         offsets = []

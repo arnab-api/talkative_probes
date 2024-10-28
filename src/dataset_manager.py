@@ -18,6 +18,7 @@ class RawExample:
     feature: str
     label: str
 
+
 @dataclass
 class TransformedExample:
     feature: str = ""
@@ -32,16 +33,16 @@ class DatasetLoader:
     def __init__(self, group, name):
         self.group = group
         self.name = name
-    
+
     # Must be overridden by dataset class
     def load(self) -> list[RawExample]:
         raise NotImplementedError
 
     # If not overridden, the transformation keeps the feature/label unchanged.
     def transform(self, example: RawExample) -> TransformedExample:
-        return TransformedExample(feature=example.feature,
-                                  label=example.label,
-                                  raw=example)
+        return TransformedExample(
+            feature=example.feature, label=example.label, raw=example
+        )
 
 
 class GeometryOfTruthDatasetLoader(DatasetLoader):
@@ -84,22 +85,24 @@ class GeometryOfTruthDatasetLoader(DatasetLoader):
 
         transformed.feature = example.feature + " " + transformed.query.format("true")
 
-        transformed.label = {
-            "0": "No",
-            "1": "Yes"
-        }[example.label]
+        transformed.label = {"0": "No", "1": "Yes"}[example.label]
 
         return transformed
 
     @staticmethod
     def get_all_loaders():
-        with open(os.path.join(env_utils.DEFAULT_DATA_DIR, "paraphrases/question.json"), "r") as f:
+        with open(
+            os.path.join(env_utils.DEFAULT_DATA_DIR, "paraphrases/question.json"), "r"
+        ) as f:
             paraphrases = json.load(f)["GMT"]
 
         loaders = []
         for name in GeometryOfTruthDatasetLoader.DATASET_NAMES:
-            loaders.append(GeometryOfTruthDatasetLoader(
-                GeometryOfTruthDatasetLoader.GROUP_NAME, name, paraphrases))
+            loaders.append(
+                GeometryOfTruthDatasetLoader(
+                    GeometryOfTruthDatasetLoader.GROUP_NAME, name, paraphrases
+                )
+            )
         return loaders
 
 
@@ -114,7 +117,9 @@ class SstDatasetLoader(DatasetLoader):
         dataset = load_dataset("stanfordnlp/sst2")
         result = []
         for split in ("train", "validation", "test"):
-            for sentence, label in zip(dataset[split]["sentence"], dataset[split]["label"]):
+            for sentence, label in zip(
+                dataset[split]["sentence"], dataset[split]["label"]
+            ):
                 result.append(RawExample(feature=sentence, label=label))
         return result
 
@@ -179,7 +184,7 @@ class RelationDatasetLoader(DatasetLoader):
 
 class DatasetManager:
     supported_datasets: dict[str, DatasetLoader] = {
-        dataset.name : dataset
+        dataset.name: dataset
         for dataset in (
             GeometryOfTruthDatasetLoader.get_all_loaders()
             + [SstDatasetLoader()]
@@ -197,16 +202,20 @@ class DatasetManager:
 
     def split(self, proportions):
         assert sum(proportions) <= 1
-    
+
         start = 0
         end = None
         result = []
         for proportion in proportions:
             end = start + math.ceil(proportion * len(self.examples))
-            result.append(DatasetManager(self.examples[start:end],
-                                         self.transformer,
-                                         self.batch_size,
-                                         shuffle=False))
+            result.append(
+                DatasetManager(
+                    self.examples[start:end],
+                    self.transformer,
+                    self.batch_size,
+                    shuffle=False,
+                )
+            )
             start = end
         return result
 

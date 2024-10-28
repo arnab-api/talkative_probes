@@ -209,7 +209,7 @@ def patchscope_finetune(
 
         for idx in range(len(lcc.latents)):
             latent_cache = lcc.latents[idx]
-            prompt = latent_cache.question
+            prompt = latent_cache.context
             label = latent_cache.answer
             yes_ans = "true" if str(label).lower().strip() == "true" else "false"
             no_ans = "false" if yes_ans == "true" else "true"

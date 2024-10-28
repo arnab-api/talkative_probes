@@ -559,8 +559,8 @@ def get_concept_latents(
 
         all_latents.append(
             LatentCache(
-                question=ques,
-                question_tokenized=[
+                context=ques,
+                context_tokenized=[
                     mt.tokenizer.decode(t) for t in inputs["input_ids"][0]
                 ],
                 answer=ans,
@@ -592,51 +592,6 @@ def detensorize(inp: dict[Any, Any] | list[dict[Any, Any]]):
     free_gpu_cache()
     return inp
 
-@torch.inference_mode()
-def get_concept_latents_simple(
-    mt: ModelandTokenizer,
-    queries: list[tuple[str, str]],
-    interested_layers: list[str],
-    check_answer: bool = True,
-):
-    # last_location = (mt.layer_names[-1], -1)
-    all_latents = []
-    for ques, ans in tqdm(queries):
-        inputs = prepare_input(
-            prompts=ques,
-            tokenizer=mt,
-            return_offset_mapping=True,
-        )
-
-        query_end = inputs["input_ids"].shape[-1] - 1
-
-        hs = get_hs(
-            mt=mt,
-            input=inputs,
-            locations=[(layer, query_end) for layer in interested_layers],
-            return_dict=True,
-        )
-
-        top_prediction = None
-
-        latents = {layer: hs[(layer, query_end)] for layer in interested_layers}
-
-        all_latents.append(
-            dict(
-                question=ques,
-                question_tokenized=[
-                    mt.tokenizer.decode(t) for t in inputs["input_ids"][0]
-                ],
-                answer=ans,
-                prediction=top_prediction,
-                query_token_idx=query_end,
-                latents=latents,
-            )
-        )
-
-    logger.debug(f"Collected {len(all_latents)} latents, out of {len(queries)}")
-
-    return all_latents
 
 @torch.inference_mode()
 def get_concept_latents_simple(
@@ -683,3 +638,112 @@ def get_concept_latents_simple(
     logger.debug(f"Collected {len(all_latents)} latents, out of {len(queries)}")
 
     return all_latents
+
+
+@torch.inference_mode()
+def get_concept_latents_simple(
+    mt: ModelandTokenizer,
+    queries: list[tuple[str, str]],
+    interested_layers: list[str],
+    check_answer: bool = True,
+):
+    # last_location = (mt.layer_names[-1], -1)
+    all_latents = []
+    for ques, ans in tqdm(queries):
+        inputs = prepare_input(
+            prompts=ques,
+            tokenizer=mt,
+            return_offset_mapping=True,
+        )
+
+        query_end = inputs["input_ids"].shape[-1] - 1
+
+        hs = get_hs(
+            mt=mt,
+            input=inputs,
+            locations=[(layer, query_end) for layer in interested_layers],
+            return_dict=True,
+        )
+
+        top_prediction = None
+
+        latents = {layer: hs[(layer, query_end)] for layer in interested_layers}
+
+        all_latents.append(
+            dict(
+                question=ques,
+                question_tokenized=[
+                    mt.tokenizer.decode(t) for t in inputs["input_ids"][0]
+                ],
+                answer=ans,
+                prediction=top_prediction,
+                query_token_idx=query_end,
+                latents=latents,
+            )
+        )
+
+    logger.debug(f"Collected {len(all_latents)} latents, out of {len(queries)}")
+
+    return all_latents
+
+
+@torch.inference_mode()
+def get_batch_concept_activations(
+    mt: ModelandTokenizer,
+    prompts: list[str] | str,
+    interested_layer_indices: list[int] | None = None,
+    check_prediction: list[str] | None = None,
+    on_token_occur: tuple[str, int] | None = None,  # (tok, occur) =>
+) -> list[LatentCache]:
+    """
+    Get the concept activations for a batch of prompts
+    args:
+        check_prediction: will check the next token prediction if passed and filter accordingly | None if skipped
+        on_token_occur: list[(tok, occur)] => Grab the activation where the tok occurs the occur-th time | None always grab the last token activations
+    """
+    if on_token_occur is not None:
+        raise NotImplementedError("TODO")
+    if check_prediction is not None:
+        raise NotImplementedError("TODO")
+
+    batch_inputs = prepare_input(
+        prompts=prompts,
+        tokenizer=mt,
+        padding_side="left",  # always left padding as we are interested in the last token
+    )
+
+    token_idx = -1
+    activations = []
+    logits = []
+    with mt.trace(batch_inputs) as trace:
+        for idx in range(len(prompts)):
+            cur_lantents = {}
+            for layer_idx in interested_layer_indices:
+                layer_name = mt.layer_name_format.format(layer_idx)
+                layer = get_module_nnsight(mt, layer_name)
+                cur_lantents[layer_name] = layer.output[0][idx, token_idx, :].save()
+
+            activations.append(
+                LatentCache(
+                    context=prompts[idx],
+                    context_tokenized=[
+                        mt.tokenizer.decode(t)
+                        for t in batch_inputs["input_ids"][idx].squeeze().tolist()
+                    ],
+                    answer=None,
+                    prediction=None,
+                    query_token_idx=token_idx,
+                    latents=cur_lantents,
+                )
+            )
+            logits.append(mt.output.logits[idx, -1, :].save())
+
+    for latent_cache, logit in zip(activations, logits):
+        latent_cache.prediction = interpret_logits(
+            tokenizer=mt,
+            logits=logit,
+            k=2,
+        )[0]
+        latent_cache.latents = {k: v.detach() for k, v in latent_cache.latents.items()}
+
+    return activations

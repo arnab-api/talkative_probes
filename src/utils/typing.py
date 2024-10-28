@@ -57,12 +57,12 @@ class PredictedToken(DataClassJsonMixin):
 
 @dataclass(frozen=False)
 class LatentCache(DataClassJsonMixin):
-    question: str
-    question_tokenized: list[str]
-    answer: str
-    prediction: PredictedToken
+    context: str
+    context_tokenized: list[str]
     query_token_idx: int
     latents: dict[str, ArrayLike]
+    answer: str | None = None
+    prediction: PredictedToken | None = None
 
 
 @dataclass(frozen=False)
@@ -74,6 +74,7 @@ class LatentCacheCollection(DataClassJsonMixin):
     def detensorize(self):
         for latent in self.latents:
             for key, value in latent.latents.items():
+                # print(key, type(value), isinstance(value, torch.Tensor))
                 if isinstance(value, torch.Tensor) or isinstance(value, numpy.ndarray):
                     latent.latents[key] = value.tolist()
 

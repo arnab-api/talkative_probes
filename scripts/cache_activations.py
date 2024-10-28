@@ -2,21 +2,16 @@ import argparse
 import logging
 import os
 import time
-from typing import Optional
 
 import torch
 import transformers
-from datasets import load_dataset
-from src.functional import get_module_nnsight, get_concept_latents
+from src.functional import get_batch_concept_activations
 from src.models import ModelandTokenizer
 from src.utils import env_utils, experiment_utils, logging_utils
-import shutil
 from transformers import get_linear_schedule_with_warmup
-from torch.utils.data import DataLoader
-import wandb
 from tqdm import tqdm
-import random, json
 from src.utils.typing import LatentCacheCollection
+from typing import Optional
 
 
 logger = logging.getLogger(__name__)
@@ -26,42 +21,65 @@ logger.info(
 )
 logger.info(f"{transformers.__version__=}")
 
-from src.dataset import GMTDataset, GMT_DATA_FILES
+from src.dataset_manager import DatasetManager
 
 
 def cache_activations(
     model_key: str,
-    data_files: list[str] = GMT_DATA_FILES,
+    dataset_names: (
+        list[tuple[str, str]] | tuple[str, str]
+    ),  #! (group_name, dataset_name) => (relations, factual/country_capital)
+    interested_layer_indices: list[int] = list(range(5, 20)),
+    latent_cache_dir: str = "cached_latents",
+    batch_size: int = 32,
 ):
     # Initialize model and tokenizer
     mt = ModelandTokenizer(
         model_key=model_key,
         torch_dtype=torch.float32,
     )
-    interested_layers = mt.layer_names
-    latent_dir = os.path.join(
+    interested_layers = [mt.layer_name_format(i) for i in interested_layer_indices]
+
+    cache_dir = os.path.join(
         env_utils.DEFAULT_RESULTS_DIR,
-        "cached_latents",
+        latent_cache_dir,
         model_key.split("/")[-1],
     )
-    os.makedirs(latent_dir, exist_ok=True)
-    for data_file in data_files:
-        dataset = GMTDataset.from_csv(files=data_file, name=data_file.split(".")[0])
-        dataset.select_few_shot(0)
-        queries = [dataset.examples[i] for i in range(len(dataset))]
-        latents = get_concept_latents(
-            mt=mt,
-            queries=queries,
-            interested_layers=interested_layers,
-            check_answer=False,
+    os.makedirs(cache_dir, exist_ok=True)
+
+    for group_name, dataset_name in dataset_names:
+        group_dir = os.path.join(cache_dir, group_name)
+        os.makedirs(group_dir, exist_ok=True)
+        data_dir = os.path.join(group_dir, dataset_name)
+        os.makedirs(data_dir, exist_ok=True)
+
+        #! I am assuming that DatasetManager.get_loader(group_name, dataset_name) returns a DatasetLoader object
+        dataloader = DatasetManager.get_loader(
+            group_name,
+            dataset_name,
+            batch_size=batch_size,
         )
 
-        lcc = LatentCacheCollection(latents=latents)
-        lcc.detensorize()
-        with open(os.path.join(latent_dir, f"{dataset.name}.json"), "w") as f:
-            f.write(lcc.to_json())
+        for batch_idx, batch in enumerate(dataloader):
+            #! batch[i] = (context, correct_label, wrong_label)
+            prompts = [b[0] for b in batch]
 
-        logger.info(f"Cached activations for {dataset.name} in {latent_dir}")
+            #! check `notebooks/test.ipynb` for example usage
+            latents = get_batch_concept_activations(
+                mt=mt,
+                prompts=prompts,
+                interested_layers=interested_layers,
+                check_prediction=None,  # will check the next token if passed | None if skipped
+                on_token_occur=None,  # always get activations at the last position
+            )
+            lcc = LatentCacheCollection(latents=latents)
+            lcc.detensorize()
+            with open(os.path.join(data_dir, f"batch_{batch_idx}.json"), "w") as f:
+                f.write(lcc.to_json())
+
+        logger.info(
+            f"|>> done caching activations for {group_name=} {dataset_name=} in {data_dir}"
+        )
 
     logger.info(f"Finished caching activations for {model_key}")
 
@@ -77,15 +95,40 @@ if __name__ == "__main__":
         default="meta-llama/Llama-3.2-3B",
     )
     parser.add_argument(
-        "--data",
+        "--dataset",
         type=str,
         nargs="+",
-        default=GMT_DATA_FILES,
-        help="List of data files to use for caching activations.",
+        help="The dataset to use for caching activations.",
+        default=[
+            "relations|factual/country_capital_city",
+            "sst2|sst2",
+            "geometry_of_truth|cities",
+        ],
     )
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        help="The batch size to use for caching activations.",
+        default=32,
+    )
+    parser.add_argument(
+        "--interested_layers",
+        type=str,
+        help="The layers to cache activations for.",
+        default="5-20",
+    )
+
     args = parser.parse_args()
     logging_utils.configure(args)
     experiment_utils.setup_experiment(args)
     logger.info(args)
 
-    cache_activations(args.model, args.data)
+    interested_layers = list(map(int, args.interested_layers.split("-")))
+    dataset_names = [tuple(d.split("|")) for d in args.dataset]
+
+    cache_activations(
+        model_key=args.model,
+        dataset_names=dataset_names,
+        interested_layer_indices=interested_layers,
+        batch_size=args.batch_size,
+    )
