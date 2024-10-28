@@ -2,23 +2,27 @@ import os
 import math
 import random
 import csv
+import json
 from dataclasses import dataclass
 from datasets import load_dataset
+import logging
 
 from src.utils.env_utils import DEFAULT_DATA_DIR
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
 class RawExample:
     feature: str
-    label: str
+    label: str  # ? Should we make this Literal["yes", "no"] | Literal["positive", "negative"] instead? -- arnab
 
 
 class DatasetLoader:
     def __init__(self, group, name):
         self.group = group
         self.name = name
-    
+
     def load(self) -> list[RawExample]:
         raise NotImplementedError
 
@@ -54,27 +58,87 @@ class GeometryOfTruthDatasetLoader(DatasetLoader):
     def get_all_loaders():
         loaders = []
         for name in GeometryOfTruthDatasetLoader.DATASET_NAMES:
-            loaders.append(GeometryOfTruthDatasetLoader(
-                GeometryOfTruthDatasetLoader.GROUP_NAME, name))
+            loaders.append(
+                GeometryOfTruthDatasetLoader(
+                    GeometryOfTruthDatasetLoader.GROUP_NAME, name
+                )
+            )
         return loaders
 
 
 class SstDatasetLoader(DatasetLoader):
     def load(self):
-        dataset = load_dataset("stanfordnlp/sst2")
+        dataset = load_dataset("stanfordnlp/sst2")["train"]
         result = []
         for sentence, label in zip(dataset["sentence"], dataset["label"]):
             result.append(RawExample(feature=sentence, label=label))
         return result
-        
+
+
+RELATION_FILES_ROOT = os.path.join(DEFAULT_DATA_DIR, "relations")
+RELATION_NAMES = []
+for relation_type in os.listdir(RELATION_FILES_ROOT):
+    for file_name in os.listdir(os.path.join(RELATION_FILES_ROOT, relation_type)):
+        if file_name.endswith(".json"):
+            RELATION_NAMES.append(f"{relation_type}/{file_name[:-5]}")
+
+
+class RelationDatasetLoader(DatasetLoader):
+
+    GROUP_NAME = "relations"
+    DATA_FILES_PATH = RELATION_FILES_ROOT
+    DATASET_NAMES = RELATION_NAMES
+
+    def load(self):
+        relation_type, relation_name = self.name.split("/")
+        file_path = os.path.join(
+            self.DATA_FILES_PATH, relation_type, f"{relation_name}.json"
+        )
+        if not os.path.exists(file_path):
+            logger.error(f"File not found: {file_path}")
+            return examples
+
+        examples = []
+        with open(file_path, "r") as f:
+            data_dict = json.load(f)
+            prompt_templates = data_dict["prompt_templates"]
+            objects = [sample["object"] for sample in data_dict["samples"]]
+            objects = set(objects)
+            for sample in data_dict["samples"]:
+                template = random.choice(prompt_templates) + " {}."
+                examples.append(
+                    RawExample(
+                        feature=template.format(sample["subject"], sample["object"]),
+                        label="1",
+                    )
+                )
+                false_obj = random.choice(list(objects - {sample["object"]}))
+                examples.append(
+                    RawExample(
+                        feature=template.format(sample["subject"], false_obj),
+                        label="0",
+                    )
+                )
+        logger.info(f"Loaded {len(examples)} examples from {self.name}.")
+        return examples
+
+    @staticmethod
+    def get_all_loaders():
+        loaders = []
+        for name in RelationDatasetLoader.DATASET_NAMES:
+            loaders.append(
+                RelationDatasetLoader(RelationDatasetLoader.GROUP_NAME, name)
+            )
+        return loaders
+
 
 class DatasetManager:
     supported_datasets: dict[str, DatasetLoader] = {
-        dataset.name : dataset
+        dataset.name: dataset
         for dataset in (
-            GeometryOfTruthDatasetLoader.get_all_loaders() + [
-                SstDatasetLoader(group="sst2", name="sst2")
-            ]
+            GeometryOfTruthDatasetLoader.get_all_loaders()
+            + [SstDatasetLoader(group="sst2", name="sst2")]
+            + RelationDatasetLoader.get_all_loaders()
         )
     }
 
@@ -87,15 +151,15 @@ class DatasetManager:
 
     def split(self, proportions):
         assert sum(proportions) <= 1
-        
+
         start = 0
         end = None
         result = []
         for proportion in proportions:
             end = start + math.ceil(proportion * len(self.examples))
-            result.append(DatasetManager(self.examples[start:end],
-                                         self.batch_size,
-                                         shuffle=False))
+            result.append(
+                DatasetManager(self.examples[start:end], self.batch_size, shuffle=False)
+            )
             start = end
         return result
 
@@ -132,5 +196,11 @@ class DatasetManager:
 
     @staticmethod
     def list_dataset_groups():
-        return list(set([dataset.group
-                         for dataset in DatasetManager.supported_datasets.values()]))
+        return list(
+            set(
+                [
+                    dataset.group
+                    for dataset in DatasetManager.supported_datasets.values()
+                ]
+            )
+        )
