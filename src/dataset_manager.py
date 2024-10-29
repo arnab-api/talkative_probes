@@ -5,6 +5,7 @@ import random
 import csv
 import json
 from dataclasses import dataclass
+from typing import Literal
 from datasets import load_dataset
 import logging
 
@@ -12,12 +13,15 @@ import src.utils.env_utils as env_utils
 
 logger = logging.getLogger(__name__)
 
+YES_TOKEN = "Yes"
+NO_TOKEN = "No"
+
 
 @dataclass
-class ContextAndAnswers:
+class ContextQASample:
     context: str
-    correct: str
-    incorrect: str
+    question: str
+    answer: str
 
 
 class DatasetLoader:
@@ -25,8 +29,13 @@ class DatasetLoader:
         self.group = group
         self.name = name
 
+        with open(
+            os.path.join(env_utils.DEFAULT_DATA_DIR, "paraphrases/question.json")
+        ) as f:
+            self.question_paraphrases = json.load(f)[group]
+
     # Must be overridden by dataset class
-    def load(self) -> list[ContextAndAnswers]:
+    def load(self) -> list[ContextQASample]:
         raise NotImplementedError
 
 
@@ -52,11 +61,14 @@ class GeometryOfTruthDatasetLoader(DatasetLoader):
         with open(os.path.join(self.DATA_FILES_PATH, filename)) as f:
             reader = csv.DictReader(f)
             for row in reader:
-                correct, incorrect = {"0": ("false", "true"), "1": ("true", "false")}[
-                    row["label"]
-                ]
-                example = ContextAndAnswers(
-                    context=row["statement"], correct=correct, incorrect=incorrect
+                question = random.choice(self.question_paraphrases)
+                answer = {
+                    "0": NO_TOKEN,
+                    "1": YES_TOKEN
+                }[row["label"]]
+
+                example = ContextQASample(
+                    context=row["statement"], question=question, answer=answer
                 )
                 examples.append(example)
 
@@ -89,13 +101,17 @@ class SstDatasetLoader(DatasetLoader):
             for sentence, label in zip(
                 dataset[split]["sentence"], dataset[split]["label"]
             ):
-                correct, incorrect = {
-                    0: ("negative", "positive"),
-                    1: ("positive", "negative"),
+                context_label = {
+                    0: "negative",
+                    1: "positive"
                 }[label]
+                question_label = random.choice(["negative", "positive"])
+                question = random.choice(self.question_paraphrases[question_label])
+                answer = YES_TOKEN if context_label == question_label else NO_TOKEN
+                
                 result.append(
-                    ContextAndAnswers(
-                        context=sentence.strip(), correct=correct, incorrect=incorrect
+                    ContextQASample(
+                        context=sentence.strip(), question=question, answer=answer
                     )
                 )
         return result
@@ -134,18 +150,18 @@ class RelationDatasetLoader(DatasetLoader):
             for sample in data_dict["samples"]:
                 template = random.choice(prompt_templates) + " {}."
                 examples.append(
-                    ContextAndAnswers(
+                    ContextQASample(
                         context=template.format(sample["subject"], sample["object"]),
-                        correct="true",
-                        incorrect="false",
+                        question=random.choice(self.question_paraphrases),
+                        answer=YES_TOKEN,
                     )
                 )
                 false_obj = random.choice(list(objects - {sample["object"]}))
                 examples.append(
-                    ContextAndAnswers(
+                    ContextQASample(
                         context=template.format(sample["subject"], false_obj),
-                        correct="false",
-                        incorrect="true",
+                        question=random.choice(self.question_paraphrases),
+                        answer=NO_TOKEN,
                     )
                 )
         logger.info(f"Loaded {len(examples)} examples from {self.name}.")
