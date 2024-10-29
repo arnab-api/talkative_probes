@@ -68,8 +68,9 @@ class GeometryOfTruthDatasetLoader(DatasetLoader):
             reader = csv.DictReader(f)
             for row in reader:
                 questions = []
-                for _ in range(NUM_QA_PER_SAMPLE):
-                    question = "# " + random.choice(self.question_paraphrases)
+                paraphrases = random.sample(self.question_paraphrases, NUM_QA_PER_SAMPLE)
+                for paraphrase in paraphrases:
+                    question = "# " + paraphrase
                     questions.append(question)
                 answer = {"0": NO_TOKEN, "1": YES_TOKEN}[row["label"]]
                 answers = [answer] * NUM_QA_PER_SAMPLE
@@ -108,13 +109,18 @@ class SstDatasetLoader(DatasetLoader):
                 dataset[split]["sentence"], dataset[split]["label"]
             ):
                 context_label = {0: "negative", 1: "positive"}[label]
-                question_label = random.choice(["negative", "positive"])
-                question = random.choice(self.question_paraphrases[question_label])
-                answer = YES_TOKEN if context_label == question_label else NO_TOKEN
+                questions = []
+                answers = []
+                for _ in range(NUM_QA_PER_SAMPLE):
+                    question_label = random.choice(["negative", "positive"])
+                    question = "# " + random.choice(self.question_paraphrases[question_label])
+                    answer = YES_TOKEN if context_label == question_label else NO_TOKEN
+                    questions.append(question)
+                    answers.append(answer)
 
                 result.append(
                     ContextQASample(
-                        context=sentence.strip(), question=question, answer=answer
+                        context=sentence.strip(), questions=questions, answers=answers
                     )
                 )
         return result
@@ -152,19 +158,21 @@ class RelationDatasetLoader(DatasetLoader):
             objects = set(objects)
             for sample in data_dict["samples"]:
                 template = random.choice(prompt_templates) + " {}."
+                questions = random.sample(self.question_paraphrases, NUM_QA_PER_SAMPLE)
                 examples.append(
                     ContextQASample(
                         context=template.format(sample["subject"], sample["object"]),
-                        question=random.choice(self.question_paraphrases),
-                        answer=YES_TOKEN,
+                        questions=["# " + q for q in questions],
+                        answers=[YES_TOKEN] * NUM_QA_PER_SAMPLE,
                     )
                 )
+                questions = random.sample(self.question_paraphrases, NUM_QA_PER_SAMPLE)
                 false_obj = random.choice(list(objects - {sample["object"]}))
                 examples.append(
                     ContextQASample(
                         context=template.format(sample["subject"], false_obj),
-                        question=random.choice(self.question_paraphrases),
-                        answer=NO_TOKEN,
+                        questions=["# " + q for q in questions],
+                        answers=[NO_TOKEN] * NUM_QA_PER_SAMPLE,
                     )
                 )
         logger.info(f"Loaded {len(examples)} examples from {self.name}.")
