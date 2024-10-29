@@ -563,7 +563,7 @@ def get_concept_latents(
                 context_tokenized=[
                     mt.tokenizer.decode(t) for t in inputs["input_ids"][0]
                 ],
-                answer=ans,
+                answers=ans,
                 prediction=top_prediction,
                 query_token_idx=query_end,
                 latents=latents,
@@ -726,13 +726,15 @@ def get_batch_concept_activations(
             activations.append(
                 LatentCache(
                     context=prompts[idx],
+                    latents=cur_lantents,
+                    questions=[],
+                    answers=[],
                     context_tokenized=[
                         mt.tokenizer.decode(t)
                         for t in batch_inputs["input_ids"][idx].squeeze().tolist()
                     ],
                     prediction=None,
                     query_token_idx=token_idx,
-                    latents=cur_lantents,
                 )
             )
             logits.append(mt.output.logits[idx, -1, :].save())

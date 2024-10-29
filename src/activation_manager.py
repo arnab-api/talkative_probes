@@ -15,15 +15,15 @@ logger = logging.getLogger(__name__)
 class ActivationSample:
     activation: ArrayLike
     context: str
-    query: str
-    label: Literal["yes", "no"]
+    question: str
+    label: Literal[" yes", " no"]  # " yes" or " no" is how the labels get tokenized
     layer_name: str | None = None
 
     def __post_init__(self):
         if isinstance(self.activation, torch.Tensor) == False:
             self.activation = torch.Tensor(self.activation)
 
-        assert self.label in ["yes", "no"]
+        assert self.label in [" yes", " no"]
         assert "#" in self.query
 
 
@@ -65,25 +65,25 @@ class ActivationLoader:
         ) as f:
             self.QUESTION_PARAPHRASES = json.load(f)
 
-    def get_latent_qa(
-        self, correct_label, wrong_label, group
-    ) -> tuple[str, Literal["yes", "no"]]:
-        assert isinstance(correct_label, str) and isinstance(wrong_label, str)
-        assert correct_label != wrong_label
+    # def get_latent_qa(
+    #     self, correct_label, wrong_label, group
+    # ) -> tuple[str, Literal["yes", "no"]]:
+    #     assert isinstance(correct_label, str) and isinstance(wrong_label, str)
+    #     assert correct_label != wrong_label
 
-        label = random.choice(["yes", "no"])
-        yes_no = random.choice(self.YES_NO_PARAPHRASES)
-        question = random.choice(self.QUESTION_PARAPHRASES[group])
+    #     label = random.choice(["yes", "no"])
+    #     yes_no = random.choice(self.YES_NO_PARAPHRASES)
+    #     question = random.choice(self.QUESTION_PARAPHRASES[group])
 
-        query = "# "
-        question = (
-            question.format(correct_label)
-            if label == "yes"
-            else question.format(wrong_label)
-        )
-        query += question + f" {yes_no}"
+    #     query = "# "
+    #     question = (
+    #         question.format(correct_label)
+    #         if label == "yes"
+    #         else question.format(wrong_label)
+    #     )
+    #     query += question + f" {yes_no}"
 
-        return query, label
+    #     return query, label
 
     def load_next_file(self):
         if self.current_file_idx >= len(self.latent_cache_files):
@@ -96,16 +96,19 @@ class ActivationLoader:
         for latent_cache in lcc.latents:
             for layer_name in latent_cache.latents.keys():
                 activation = latent_cache.latents[layer_name]
-                query, label = self.get_latent_qa(
-                    correct_label=latent_cache.correct_label,
-                    wrong_label=latent_cache.incorrect_label,
-                    group=latent_cache.group,
+                # query, label = self.get_latent_qa(
+                #     correct_label=latent_cache.correct_label,
+                #     wrong_label=latent_cache.incorrect_label,
+                #     group=latent_cache.group,
+                # )
+                question, label = random.choice(
+                    list(zip(latent_cache.questions, latent_cache.answers))
                 )
                 add_to_buffer.append(
                     ActivationSample(
                         activation=activation,
                         context=latent_cache.context,
-                        query=query,
+                        question=question,
                         label=label,
                         layer_name=layer_name,
                     )

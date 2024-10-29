@@ -58,13 +58,13 @@ class PredictedToken(DataClassJsonMixin):
 @dataclass(frozen=False)
 class LatentCache(DataClassJsonMixin):
     context: str
+    latents: dict[str, ArrayLike]
+    questions: list[str]
+    answers: list[str]
+
     context_tokenized: list[str]
     query_token_idx: int
-    latents: dict[str, ArrayLike]
     prediction: PredictedToken | None = None
-    correct_label: str | None = None
-    incorrect_label: str | None = None
-    group: str | None = None
 
 
 @dataclass(frozen=False)

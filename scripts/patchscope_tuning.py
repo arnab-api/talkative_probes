@@ -133,7 +133,7 @@ def remove_dir(path):
 
 def patchscope_finetune(
     model_key: str,
-    layers_of_interest: list[int] = list(range(8, 20)),
+    # layers_of_interest: list[int] = list(range(8, 20)),
     checkpoint_save_dir: str = "patchscope_test",
     num_final_layers_to_tune: int = 10,
     wandb_logging=True,
@@ -172,8 +172,7 @@ def patchscope_finetune(
         shuffle=True,
         name="ValidateLoader",
     )
-
-    ############################## Load Activation Loader ##############################
+    ###################################################################################
 
     checkpoint_save_dir = os.path.join(
         env_utils.DEFAULT_RESULTS_DIR, checkpoint_save_dir, model_key.split("/")[-1]

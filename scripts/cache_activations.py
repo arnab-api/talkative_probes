@@ -59,7 +59,10 @@ def cache_activations(
         )
 
         for batch_idx, batch in tqdm(enumerate(dataloader)):
-            prompts = [b.context for b in batch]
+            prompts = [context_qa.context for context_qa in batch]
+            questions = [context_qa.questions for context_qa in batch]
+            answers = [context_qa.answers for context_qa in batch]
+
             latents = get_batch_concept_activations(
                 mt=mt,
                 prompts=prompts,
@@ -68,8 +71,11 @@ def cache_activations(
                 on_token_occur=None,
             )
 
-            for latent_cache in latents:
-                latent_cache.group = group_name
+            # ! Right now we are not doing any kind of filtering
+            # ! If we are doing any kind of runtime filtering then make sure to keep track of which samples got filtered out
+            for latent_cache, question, answer in zip(latents, questions, answers):
+                latent_cache.questions = question
+                latent_cache.answers = [f" {a.strip()}" for a in answer]
 
             lcc = LatentCacheCollection(latents=latents)
             lcc.detensorize()
