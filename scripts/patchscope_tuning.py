@@ -113,6 +113,7 @@ def get_validation_set(validate_act_loader: ActivationLoader, num: int = 200):
     cur_eval_loader = ActivationLoader(
         latent_cache_files=random.choices(validate_act_loader.latent_cache_files, k=25),
         batch_size=validate_act_loader.batch_size,
+        name="CurEvalLoader",
     )
     while True:
         try:
@@ -158,11 +159,18 @@ def patchscope_finetune(
     val_act_batch_paths = activation_batch_paths[train_split:]
 
     train_act_loader = ActivationLoader(
-        latent_cache_files=train_act_batch_paths, batch_size=batch_size, shuffle=True
+        latent_cache_files=train_act_batch_paths,
+        batch_size=batch_size,
+        shuffle=True,
+        name="TrainLoader",
+        logging=True,
     )
 
     validate_act_loader = ActivationLoader(
-        latent_cache_files=val_act_batch_paths, batch_size=batch_size, shuffle=True
+        latent_cache_files=val_act_batch_paths,
+        batch_size=batch_size,
+        shuffle=True,
+        name="ValidateLoader",
     )
 
     ############################## Load Activation Loader ##############################

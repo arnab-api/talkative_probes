@@ -143,7 +143,10 @@ if __name__ == "__main__":
     logger.info(args)
 
     assert args.dataset_group is not None or len(args.dataset) > 0
-    interested_layers = list(map(int, args.interested_layers.split("-")))
+    interested_layers_range = args.interested_layers.split("-")
+    interested_layers = list(
+        range(int(interested_layers_range[0]), int(interested_layers_range[1]) + 1)
+    )
     if args.dataset_group is not None:
         dataset_names = [
             (args.dataset_group, d_name)

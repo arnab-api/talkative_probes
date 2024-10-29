@@ -29,7 +29,12 @@ class ActivationSample:
 
 class ActivationLoader:
     def __init__(
-        self, latent_cache_files: str, shuffle: bool = True, batch_size: int = 32
+        self,
+        latent_cache_files: str,
+        shuffle: bool = True,
+        batch_size: int = 32,
+        name: str = "ActivationLoader",
+        logging: bool = False,
     ):
         self.latent_cache_files = []
         for file_path in latent_cache_files:
@@ -43,6 +48,8 @@ class ActivationLoader:
         if shuffle:
             random.shuffle(self.latent_cache_files)
 
+        self.name = name
+        self.logging = logging
         self.current_file_idx = 0
         self.buffer: list[ActivationSample] = []
         self.batch_size = batch_size
@@ -101,10 +108,15 @@ class ActivationLoader:
                     )
                 )
 
+        if self.logging:
+            logger.info(
+                f"|> {self.name} <| {self.current_file_idx+1}/{len(self.latent_cache_files)} adding {len(add_to_buffer)} samples. File: {self.latent_cache_files[self.current_file_idx]}"
+            )
+
         random.shuffle(add_to_buffer)
         self.buffer.extend(add_to_buffer)
         self.current_file_idx += 1
-        return True
+        return True if len(self.buffer) > 0 else False
 
     def next_batch(self):
         if self.stop_iteration:
@@ -113,6 +125,10 @@ class ActivationLoader:
         if len(self.buffer) < self.batch_size:
             if self.load_next_file() == False:
                 self.stop_iteration = True  # will raise StopIteration next time
+
+        # corner case
+        if len(self.buffer) == 0:
+            raise StopIteration
 
         batch = self.buffer[: self.batch_size]
         self.buffer = self.buffer[self.batch_size :]
