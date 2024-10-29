@@ -16,15 +16,15 @@ class ActivationSample:
     activation: ArrayLike
     context: str
     question: str
-    label: Literal[" yes", " no"]  # " yes" or " no" is how the labels get tokenized
+    label: Literal[" Yes", " No"]  # " yes" or " no" is how the labels get tokenized
     layer_name: str | None = None
 
     def __post_init__(self):
         if isinstance(self.activation, torch.Tensor) == False:
             self.activation = torch.Tensor(self.activation)
 
-        assert self.label in [" yes", " no"]
-        assert "#" in self.query
+        assert self.label in [" Yes", " No"]
+        assert "#" in self.question
 
 
 class ActivationLoader:

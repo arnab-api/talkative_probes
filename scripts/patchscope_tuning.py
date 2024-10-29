@@ -27,7 +27,7 @@ logger.info(f"{transformers.__version__=}")
 
 
 def prepare_batch_input(batch: list[ActivationSample], mt: ModelandTokenizer):
-    batch_prompts = [b.query for b in batch]
+    batch_prompts = [b.question for b in batch]
     batch_tokenized = prepare_input(
         prompts=batch_prompts, tokenizer=mt, return_offsets_mapping=True
     )
@@ -37,7 +37,7 @@ def prepare_batch_input(batch: list[ActivationSample], mt: ModelandTokenizer):
         try:
             offset_mapping = batch_tokenized["offset_mapping"][idx]
             act_range = find_token_range(
-                string=batch[idx].query,
+                string=batch[idx].question,
                 substring="#",
                 occurrence=0,
                 tokenizer=mt,
@@ -46,7 +46,7 @@ def prepare_batch_input(batch: list[ActivationSample], mt: ModelandTokenizer):
             int_tok_idx.append(act_range[1] - 1)
         except:
             logger.error(
-                f"can't find '#' in \"{batch[idx].query}\" ==> bad training data"
+                f"can't find '#' in \"{batch[idx].question}\" ==> bad training data"
             )
             first_attn_token = batch_tokenized["attention_mask"].index(1) + 1
             int_tok_idx.append(first_attn_token)
