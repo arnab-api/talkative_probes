@@ -68,14 +68,7 @@ def cache_activations(
                 on_token_occur=None,
             )
 
-            correct_labels = [b.correct for b in batch]
-            incorrect_labels = [b.incorrect for b in batch]
-
-            for latent_cache, correct, incorrect in zip(
-                latents, correct_labels, incorrect_labels
-            ):
-                latent_cache.correct_label = correct
-                latent_cache.incorrect_label = incorrect
+            for latent_cache in latents:
                 latent_cache.group = group_name
 
             lcc = LatentCacheCollection(latents=latents)
@@ -107,9 +100,9 @@ if __name__ == "__main__":
         nargs="+",
         help="The dataset to use for caching activations.",
         default=[
-            # "relations|factual/country_capital_city",
-            # "sst2|sst2",
-            # "geometry_of_truth|cities",
+            "relations|factual/country_capital_city",
+            "sst2|sst2",
+            "geometry_of_truth|cities",
         ],
     )
     parser.add_argument(
