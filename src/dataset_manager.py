@@ -99,6 +99,50 @@ class MdGenderDatasetLoader(DatasetLoader):
         return result
 
 
+class AgNewsDatasetLoader(DatasetLoader):
+    GROUP_NAME = "ag_news"
+    DATASET_NAME = "ag_news"
+    DATA_FILES_PATH = os.path.join(env_utils.DEFAULT_DATA_DIR, "ag_news")
+
+    def __init__(self):
+        super().__init__(AgNewsDatasetLoader.GROUP_NAME, AgNewsDatasetLoader.DATASET_NAME)
+
+    def load(self):
+        label_to_topic = {
+            "1" : "World News",
+            "2" : "Sports",
+            "3" : "Business",
+            "4" : "Science/Technology"
+        }
+        labels = set(label_to_topic.keys())
+        examples = []
+        with open(os.path.join(self.DATA_FILES_PATH, "ag_news.csv")) as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                correct_label = row["Class Index"]
+
+                title = row["Title"]
+                description = row["Description"]
+
+                context = f"{title}\n\n{description}"
+                questions = []
+                answers = []
+                
+                paraphrases = random.sample(self.question_paraphrases, NUM_QA_PER_SAMPLE)
+                for paraphrase in paraphrases:
+                    incorrect_label = random.choice(list(labels - {correct_label}))
+                    question_label = random.choice((correct_label, incorrect_label))
+                    question = "# " + paraphrase.format(label_to_topic[question_label])
+                    answer = YES_TOKEN if question_label == correct_label else NO_TOKEN
+                    questions.append(question)
+                    answers.append(answer)
+
+                examples.append(ContextQASample(
+                    context=context, questions=questions, answers=answers
+                ))
+        return examples
+
+
 class GeometryOfTruthDatasetLoader(DatasetLoader):
     GROUP_NAME = "geometry_of_truth"
     DATA_FILES_PATH = os.path.join(env_utils.DEFAULT_DATA_DIR, "gmt")
@@ -252,8 +296,11 @@ class DatasetManager:
         for dataset in (
             GeometryOfTruthDatasetLoader.get_all_loaders()
             + RelationDatasetLoader.get_all_loaders()
-            + [SstDatasetLoader(),
-               MdGenderDatasetLoader()]
+            + [
+                SstDatasetLoader(),
+                MdGenderDatasetLoader(),
+                AgNewsDatasetLoader()
+              ]
         )
     }
 

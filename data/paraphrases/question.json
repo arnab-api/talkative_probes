@@ -21,6 +21,28 @@
         "Does this portray a {} individual?",
         "Is this describing a {} person?"
     ],
+    "ag_news": [
+        "Would you say this piece focuses on {}?",
+        "Does this article primarily address {}?",
+        "To what extent does this text explore {}?",
+        "Is {} the main subject matter of this article?",
+        "Can this article be categorized under {}?",
+        "In terms of content, does this piece deal with {}?",
+        "Would you classify this as an article about {}?",
+        "Does the scope of this article encompass {}?",
+        "Is {} the central theme of this piece?",
+        "How relevant is this article to {}?",
+        "Can this be considered a {}-related article?",
+        "Does this writing concentrate on aspects of {}?",
+        "To what degree does this article cover {}?",
+        "Is there a substantial focus on {} in this article?",
+        "Would you describe this as a discussion of {}?",
+        "Does the content of this article pertain to {}?",
+        "Is {} a key subject in this piece?",
+        "Could this be summarized as an article about {}?",
+        "Does this article delve into matters concerning {}?",
+        "In essence, is this a piece about {}?"
+    ],
     "geometry_of_truth": [
         "Is this statement true?",
         "Is this true?",
