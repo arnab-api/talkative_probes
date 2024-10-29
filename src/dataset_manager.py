@@ -50,7 +50,7 @@ class MdGenderDatasetLoader(DatasetLoader):
     DATASET_NAME = "md_gender"
 
     def __init__(self):
-        super().__init__(MdGenderDatasetLoader.GROUP_NAME, MdGenderDatasetLoader.DATASET_NAME)
+        super().__init__(self.__class__.GROUP_NAME, self.__class__.DATASET_NAME)
 
     def load(self):
         dataset = load_dataset("facebook/md_gender_bias", name="funpedia")
@@ -105,7 +105,7 @@ class AgNewsDatasetLoader(DatasetLoader):
     DATA_FILES_PATH = os.path.join(env_utils.DEFAULT_DATA_DIR, "ag_news")
 
     def __init__(self):
-        super().__init__(AgNewsDatasetLoader.GROUP_NAME, AgNewsDatasetLoader.DATASET_NAME)
+        super().__init__(self.__class__.GROUP_NAME, self.__class__.DATASET_NAME)
 
     def load(self):
         label_to_topic = {
@@ -197,7 +197,7 @@ class SstDatasetLoader(DatasetLoader):
     DATASET_NAME = "sst2"
 
     def __init__(self):
-        super().__init__(SstDatasetLoader.GROUP_NAME, SstDatasetLoader.DATASET_NAME)
+        super().__init__(self.__class__.GROUP_NAME, self.__class__.DATASET_NAME)
 
     def load(self):
         dataset = load_dataset("stanfordnlp/sst2")
