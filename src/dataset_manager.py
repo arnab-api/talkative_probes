@@ -15,13 +15,19 @@ logger = logging.getLogger(__name__)
 
 YES_TOKEN = "Yes"
 NO_TOKEN = "No"
+NUM_QA_PER_SAMPLE = 10
 
 
 @dataclass
 class ContextQASample:
     context: str
-    question: str
-    answer: str
+    questions: list[str]
+    answers: list[str]
+    
+    def __post_init__(self):
+        for q, a in zip(self.questions, self.answers):
+            assert a in (YES_TOKEN, NO_TOKEN)
+            assert "#" in q
 
 
 class DatasetLoader:
@@ -61,11 +67,15 @@ class GeometryOfTruthDatasetLoader(DatasetLoader):
         with open(os.path.join(self.DATA_FILES_PATH, filename)) as f:
             reader = csv.DictReader(f)
             for row in reader:
-                question = random.choice(self.question_paraphrases)
+                questions = []
+                for _ in range(NUM_QA_PER_SAMPLE):
+                    question = "# " + random.choice(self.question_paraphrases)
+                    questions.append(question)
                 answer = {"0": NO_TOKEN, "1": YES_TOKEN}[row["label"]]
+                answers = [answer] * NUM_QA_PER_SAMPLE
 
                 example = ContextQASample(
-                    context=row["statement"], question=question, answer=answer
+                    context=row["statement"], questions=questions, answers=answers
                 )
                 examples.append(example)
 
