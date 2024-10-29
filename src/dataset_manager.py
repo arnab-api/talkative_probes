@@ -95,7 +95,6 @@ class SstDatasetLoader(DatasetLoader):
 
     def load(self):
         dataset = load_dataset("stanfordnlp/sst2")
-        breakpoint()
         result = []
         for split in ("train", "validation"):
             for sentence, label in zip(
