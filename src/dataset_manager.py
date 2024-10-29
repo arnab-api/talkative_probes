@@ -165,9 +165,13 @@ class SstDatasetLoader(DatasetLoader):
                 context_label = {0: "negative", 1: "positive"}[label]
                 questions = []
                 answers = []
-                for _ in range(NUM_QA_PER_SAMPLE):
+                paraphrases = {
+                    label : random.sample(self.question_paraphrases[label], NUM_QA_PER_SAMPLE)
+                    for label in ("positive", "negative")
+                }
+                for i in range(NUM_QA_PER_SAMPLE):
                     question_label = random.choice(["negative", "positive"])
-                    question = "# " + random.choice(self.question_paraphrases[question_label])
+                    question = "# " + paraphrases[question_label][i]
                     answer = YES_TOKEN if context_label == question_label else NO_TOKEN
                     questions.append(question)
                     answers.append(answer)
