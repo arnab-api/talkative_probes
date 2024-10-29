@@ -68,6 +68,9 @@ class ActivationLoader:
     def get_latent_qa(
         self, correct_label, wrong_label, group
     ) -> tuple[str, Literal["yes", "no"]]:
+        assert isinstance(correct_label, str) and isinstance(wrong_label, str)
+        assert correct_label != wrong_label
+
         label = random.choice(["yes", "no"])
         yes_no = random.choice(self.YES_NO_PARAPHRASES)
         question = random.choice(self.QUESTION_PARAPHRASES[group])

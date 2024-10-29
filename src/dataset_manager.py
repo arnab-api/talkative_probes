@@ -62,10 +62,7 @@ class GeometryOfTruthDatasetLoader(DatasetLoader):
             reader = csv.DictReader(f)
             for row in reader:
                 question = random.choice(self.question_paraphrases)
-                answer = {
-                    "0": NO_TOKEN,
-                    "1": YES_TOKEN
-                }[row["label"]]
+                answer = {"0": NO_TOKEN, "1": YES_TOKEN}[row["label"]]
 
                 example = ContextQASample(
                     context=row["statement"], question=question, answer=answer
@@ -100,14 +97,11 @@ class SstDatasetLoader(DatasetLoader):
             for sentence, label in zip(
                 dataset[split]["sentence"], dataset[split]["label"]
             ):
-                context_label = {
-                    0: "negative",
-                    1: "positive"
-                }[label]
+                context_label = {0: "negative", 1: "positive"}[label]
                 question_label = random.choice(["negative", "positive"])
                 question = random.choice(self.question_paraphrases[question_label])
                 answer = YES_TOKEN if context_label == question_label else NO_TOKEN
-                
+
                 result.append(
                     ContextQASample(
                         context=sentence.strip(), question=question, answer=answer

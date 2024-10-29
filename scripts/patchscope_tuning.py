@@ -163,7 +163,7 @@ def patchscope_finetune(
         batch_size=batch_size,
         shuffle=True,
         name="TrainLoader",
-        logging=True,
+        # logging=True,
     )
 
     validate_act_loader = ActivationLoader(
