@@ -45,6 +45,60 @@ class DatasetLoader:
         raise NotImplementedError
 
 
+class MdGenderDatasetLoader(DatasetLoader):
+    GROUP_NAME = "md_gender"
+    DATASET_NAME = "md_gender"
+
+    def __init__(self):
+        super().__init__(MdGenderDatasetLoader.GROUP_NAME, MdGenderDatasetLoader.DATASET_NAME)
+
+    def load(self):
+        dataset = load_dataset("facebook/md_gender_bias", name="funpedia")
+        all_examples = []
+        female_count = 0
+        for split in ("train", "validation", "test"):
+            for text, entity, gender in zip(
+                dataset[split]["text"], dataset[split]["title"], dataset[split]["gender"]
+            ):
+                if gender == 0:
+                    # skip gender-neutral
+                    continue
+                gender = {1: "female", 2: "male"}[gender]
+                if gender == "female":
+                    female_count += 1
+                all_examples.append((text, entity, gender))
+
+        # Shuffle and go through examples again to balance the labels
+        random.shuffle(all_examples)
+        
+        result = []
+        male_count = 0
+        for text, entity, context_label in all_examples:
+            if context_label == "male":
+                if male_count >= female_count:
+                    continue
+                male_count += 1
+
+            questions = []
+            answers = []
+            paraphrases = random.sample(self.question_paraphrases, NUM_QA_PER_SAMPLE)
+            for paraphrase in paraphrases:
+                question_label = random.choice(["female", "male"])
+                question = "# " + paraphrase.format(question_label)
+                answer = YES_TOKEN if context_label == question_label else NO_TOKEN
+                questions.append(question)
+                answers.append(answer)
+
+            context = f"{text}\n\nThis text is about {entity}."
+
+            result.append(
+                ContextQASample(
+                    context=context, questions=questions, answers=answers
+                )
+            )
+        return result
+
+
 class GeometryOfTruthDatasetLoader(DatasetLoader):
     GROUP_NAME = "geometry_of_truth"
     DATA_FILES_PATH = os.path.join(env_utils.DEFAULT_DATA_DIR, "gmt")
@@ -193,8 +247,9 @@ class DatasetManager:
         (dataset.group, dataset.name): dataset
         for dataset in (
             GeometryOfTruthDatasetLoader.get_all_loaders()
-            + [SstDatasetLoader()]
             + RelationDatasetLoader.get_all_loaders()
+            + [SstDatasetLoader(),
+               MdGenderDatasetLoader()]
         )
     }
 

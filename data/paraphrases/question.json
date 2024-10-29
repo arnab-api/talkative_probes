@@ -1,4 +1,26 @@
 {
+    "md_gender": [
+        "Is this sentence about a {} person?",
+        "Does this describe someone who is {}?",
+        "Is the subject of this sentence {}?",
+        "Does this refer to a {} individual?",
+        "Is this talking about a {} person?",
+        "Am I reading about a {} person here?",
+        "Is the person mentioned {}?",
+        "Does this text discuss a {} individual?",
+        "Is this statement about someone who's {}?",
+        "Am I reading about someone who identifies as {}?",
+        "Does this passage concern a {} person?",
+        "Is this narrative about a {} individual?",
+        "Is the character described here {}?",
+        "Does this text feature a {} person?",
+        "Is this about someone who is {}?",
+        "Am I learning about a {} individual here?",
+        "Does this content reference a {} person?",
+        "Is the focus of this sentence on someone {}?",
+        "Does this portray a {} individual?",
+        "Is this describing a {} person?"
+    ],
     "geometry_of_truth": [
         "Is this statement true?",
         "Is this true?",
