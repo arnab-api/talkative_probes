@@ -534,6 +534,7 @@ class DatasetManager:
                 NerDatasetLoader(),
                 TenseDatasetLoader(),
                 LanguageIDDatasetLoader(),
+                SingularPluralDatasetLoader(),
             ]
         )
     }
