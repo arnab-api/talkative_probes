@@ -184,5 +184,41 @@
         "Can we determine that this is in {}?",
         "Is the text presented in {}?",
         "Is this passage composed in {}?"
-    ]
+    ],
+    "singular_plural": {
+        "single": [
+            "Would you say this sentence mentions a single person?",
+            "Is this sentence referring to one individual?",
+            "Does this statement indicate a singular subject?",
+            "Is the subject of this sentence one person?",
+            "Can we interpret this as referring to a single entity?",
+            "Is this text discussing one individual?",
+            "Does this sentence focus on a single person?",
+            "Is the reference here to one individual?",
+            "Am I correct in saying this is about a single person?",
+            "Is this statement about one entity?",
+            "Does this passage concern a single individual?",
+            "Is the character described here one person?",
+            "Is this narrative about a single subject?",
+            "Does this text feature one individual?",
+            "Is this about one person?"
+        ],
+        "multiple": [
+            "Would you say this sentence mentions multiple people?",
+            "Is this sentence referring to more than one individual?",
+            "Does this statement indicate a plural subject?",
+            "Is the subject of this sentence more than one person?",
+            "Can we interpret this as referring to multiple entities?",
+            "Is this text discussing more than one individual?",
+            "Does this sentence focus on multiple people?",
+            "Is the reference here to more than one individual?",
+            "Am I correct in saying this is about multiple people?",
+            "Is this statement about more than one entity?",
+            "Does this passage concern multiple individuals?",
+            "Is the character described here more than one person?",
+            "Is this narrative about multiple subjects?",
+            "Does this text feature multiple individuals?",
+            "Is this about more than one person?"
+        ]
+    }
 }

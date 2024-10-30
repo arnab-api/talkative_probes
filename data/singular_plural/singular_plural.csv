@@ -1,0 +1,369 @@
+sentence,n_subjects
+Andy Garcia is an actor.,single
+Andy and Gabrielle went to a party.,multiple
+The children are playing in the park.,multiple
+My grandparents are in town.,multiple
+The pen name of Samuel Clemens is Mark Twain.,single
+Mary's husband is a doctor.,single
+John is reading a book.,single
+Sarah and Mike are dancing.,multiple
+The teacher is writing on the board.,single
+Students are taking their exam.,multiple
+My sister lives in Paris.,single
+Tom and Jerry are cartoon characters.,multiple
+The baby is sleeping.,single
+The twins are identical.,multiple
+David plays the guitar.,single
+Emma and Olivia are best friends.,multiple
+The president gave a speech.,single
+The team won the championship.,multiple
+My brother works at the bank.,single
+The couple is getting married.,multiple
+Peter is tall.,single
+Jack and Jill went up the hill.,multiple
+The musician performed brilliantly.,single
+The choir sang beautifully.,multiple
+Lisa bakes cookies.,single
+Bob and Alice are programmers.,multiple
+The doctor examined the patient.,single
+The nurses work night shifts.,multiple
+Michael drives a red car.,single
+The boys are playing football.,multiple
+Susan writes poetry.,single
+Mark and Jane are teachers.,multiple
+The pilot landed safely.,single
+The passengers boarded the plane.,multiple
+Helen paints landscapes.,single
+The artists exhibited their work.,multiple
+George is sleeping.,single
+The brothers started a business.,multiple
+The chef prepared dinner.,single
+The cooks are very busy.,multiple
+Amanda speaks French.,single
+Paul and Mary study together.,multiple
+The driver stopped suddenly.,single
+The riders fell off their bikes.,multiple
+Kevin won the race.,single
+The runners finished the marathon.,multiple
+Emily likes chocolate.,single
+The girls went shopping.,multiple
+The professor teaches mathematics.,single
+The students take notes.,multiple
+William wrote a novel.,single
+The authors published their books.,multiple
+Rachel sings beautifully.,single
+The band members practice daily.,multiple
+Daniel plays basketball.,single
+The players scored points.,multiple
+Laura works from home.,single
+The employees had a meeting.,multiple
+The dentist cleaned my teeth.,single
+The doctors discussed the case.,multiple
+Robert drives carefully.,single
+The drivers stopped at the light.,multiple
+Anna dances gracefully.,single
+The dancers performed on stage.,multiple
+The policeman directed traffic.,single
+The officers patrol the streets.,multiple
+Christopher is tall.,single
+The neighbors are friendly.,multiple
+Patricia bakes bread.,single
+The bakers prepared pastries.,multiple
+Timothy walks to school.,single
+The children rode their bikes.,multiple
+Elizabeth reads magazines.,single
+The readers joined the club.,multiple
+Andrew plays tennis.,single
+The athletes trained hard.,multiple
+Margaret gardens regularly.,single
+The gardeners planted trees.,multiple
+Thomas fixes cars.,single
+The mechanics work late.,multiple
+Jennifer teaches yoga.,single
+The instructors planned classes.,multiple
+Charles paints houses.,single
+The painters finished early.,multiple
+Dorothy writes stories.,single
+The writers met for coffee.,multiple
+Joseph sells insurance.,single
+The salespeople reached targets.,multiple
+Catherine studies medicine.,single
+The students passed exams.,multiple
+Steven delivers mail.,single
+The workers took breaks.,multiple
+Rebecca speaks Spanish.,single
+The speakers gave presentations.,multiple
+Edward builds furniture.,single
+The carpenters used tools.,multiple
+Sharon cooks dinner.,single
+The chefs created menus.,multiple
+Donald watches movies.,single
+The viewers enjoyed the film.,multiple
+Michelle reads news.,single
+The reporters wrote stories.,multiple
+Kenneth drives trucks.,single
+The truckers delivered goods.,multiple
+Lisa teaches math.,single
+The teachers graded papers.,multiple
+Gregory plays drums.,single
+The musicians performed live.,multiple
+Sandra walks dogs.,single
+The walkers exercised daily.,multiple
+Ronald fixes computers.,single
+The technicians solved problems.,multiple
+Carol designs websites.,single
+The designers created logos.,multiple
+Larry coaches football.,single
+The coaches planned strategy.,multiple
+Betty serves food.,single
+The servers took orders.,multiple
+Stephen writes code.,single
+The programmers debugged software.,multiple
+Nancy sells houses.,single
+The agents showed properties.,multiple
+Gary teaches history.,single
+The professors published papers.,multiple
+Maria cleans houses.,single
+The cleaners finished work.,multiple
+Eric repairs phones.,single
+The repairmen fixed devices.,multiple
+Ruth bakes cakes.,single
+The bakers decorated pastries.,multiple
+Bruce drives buses.,single
+The drivers followed routes.,multiple
+Deborah teaches dance.,single
+The dancers practiced routines.,multiple
+Wayne plays guitar.,single
+The musicians tuned instruments.,multiple
+Diane writes blogs.,single
+The bloggers posted content.,multiple
+Roger delivers packages.,single
+The couriers made deliveries.,multiple
+Joyce paints portraits.,single
+The artists displayed work.,multiple
+Carl fixes appliances.,single
+The technicians repaired machines.,multiple
+Martha designs clothes.,single
+The designers showed collections.,multiple
+Gerald coaches baseball.,single
+The coaches trained teams.,multiple
+Christine serves drinks.,single
+The bartenders mixed cocktails.,multiple
+Keith writes songs.,single
+The composers created music.,multiple
+Ann sells flowers.,single
+The florists arranged bouquets.,multiple
+Harold teaches science.,single
+The scientists conducted research.,multiple
+Catherine cleans offices.,single
+The janitors maintained buildings.,multiple
+Jeremy repairs bikes.,single
+The mechanics fixed vehicles.,multiple
+Virginia bakes pies.,single
+The chefs prepared desserts.,multiple
+Terry drives taxis.,single
+The drivers picked passengers.,multiple
+Evelyn teaches piano.,single
+The musicians performed concerts.,multiple
+Arthur plays chess.,single
+The players competed today.,multiple
+Joan writes reports.,single
+The reporters covered stories.,multiple
+Henry delivers newspapers.,single
+The carriers completed routes.,multiple
+Gloria paints murals.,single
+The artists created artwork.,multiple
+Douglas fixes roofs.,single
+The roofers completed repairs.,multiple
+Cheryl designs gardens.,single
+The landscapers planted flowers.,multiple
+Philip coaches soccer.,single
+The trainers instructed teams.,multiple
+Teresa serves coffee.,single
+The baristas made drinks.,multiple
+Stanley writes reviews.,single
+The critics evaluated shows.,multiple
+Rose sells tickets.,single
+The vendors processed sales.,multiple
+Leonard teaches English.,single
+The tutors helped students.,multiple
+Julia cleans pools.,single
+The workers maintained facilities.,multiple
+Nathan repairs watches.,single
+The watchmakers fixed timepieces.,multiple
+Phyllis bakes muffins.,single
+The bakers supplied stores.,multiple
+Roy drives trucks.,single
+The truckers transported goods.,multiple
+Louise teaches art.,single
+The instructors demonstrated techniques.,multiple
+Billy plays violin.,single
+The musicians rehearsed pieces.,multiple
+Judith writes novels.,single
+The authors signed books.,multiple
+Howard delivers mail.,single
+The postal workers sorted letters.,multiple
+Marilyn paints landscapes.,single
+The painters exhibited works.,multiple
+Ralph fixes computers.,single
+The technicians upgraded systems.,multiple
+Jean designs websites.,single
+The developers coded programs.,multiple
+Johnny coaches basketball.,single
+The coaches motivated players.,multiple
+Beverly serves lunch.,single
+The cafeteria workers prepared meals.,multiple
+Justin writes articles.,single
+The journalists published stories.,multiple
+Denise sells cars.,single
+The dealers closed deals.,multiple
+Randy teaches music.,single
+The educators planned lessons.,multiple
+Pamela cleans carpets.,single
+The cleaners sanitized floors.,multiple
+Victor repairs phones.,single
+The technicians solved issues.,multiple
+Rita bakes bread.,single
+The bakers supplied restaurants.,multiple
+Craig drives buses.,single
+The drivers transported passengers.,multiple
+Monica teaches yoga.,single
+The instructors led classes.,multiple
+Jesse plays drums.,single
+The drummers practiced rhythms.,multiple
+Esther writes poetry.,single
+The poets recited verses.,multiple
+Don delivers packages.,single
+The delivery workers sorted items.,multiple
+Agnes paints ceramics.,single
+The artists glazed pottery.,multiple
+Bill fixes engines.,single
+The mechanics repaired motors.,multiple
+Clara designs jewelry.,single
+The jewelers created pieces.,multiple
+Glen coaches tennis.,single
+The coaches trained athletes.,multiple
+Gladys serves breakfast.,single
+The servers took orders.,multiple
+Calvin writes software.,single
+The developers coded applications.,multiple
+Ethel sells produce.,single
+The vendors displayed goods.,multiple
+Harvey teaches dance.,single
+The instructors choreographed routines.,multiple
+Marjorie cleans windows.,single
+The cleaners washed glass.,multiple
+Cecil repairs bicycles.,single
+The mechanics fixed bikes.,multiple
+Pauline bakes cookies.,single
+The bakers packaged treats.,multiple
+Alex drives taxis.,single
+The drivers transported clients.,multiple
+Juanita teaches Spanish.,single
+The teachers prepared lessons.,multiple
+Franklin plays piano.,single
+The pianists performed songs.,multiple
+Anita writes scripts.,single
+The writers drafted screenplays.,multiple
+Gordon delivers pizzas.,single
+The drivers made deliveries.,multiple
+Joanne paints signs.,single
+The painters completed projects.,multiple
+Isaac fixes appliances.,single
+The repairmen serviced machines.,multiple
+Lorraine designs costumes.,single
+The designers created outfits.,multiple
+Angelo coaches swimming.,single
+The coaches trained swimmers.,multiple
+Madeline serves wine.,single
+The sommeliers poured drinks.,multiple
+Gilbert writes manuals.,single
+The writers documented procedures.,multiple
+Eleanor sells insurance.,single
+The agents processed claims.,multiple
+Max teaches physics.,single
+The professors conducted experiments.,multiple
+Bernice cleans hotels.,single
+The housekeepers maintained rooms.,multiple
+Eugene repairs furniture.,single
+The craftsmen restored pieces.,multiple
+Verna bakes pastries.,single
+The pastry chefs created desserts.,multiple
+Marvin drives trucks.,single
+The truckers hauled freight.,multiple
+Charlotte teaches ballet.,single
+The dancers practiced positions.,multiple
+Warren plays saxophone.,single
+The musicians performed solos.,multiple
+Pearl writes columns.,single
+The columnists submitted articles.,multiple
+Bernard delivers flowers.,single
+The florists arranged deliveries.,multiple
+Lucille paints portraits.,single
+The artists sketched models.,multiple
+Herman fixes computers.,single
+The technicians installed updates.,multiple
+Mae designs gardens.,single
+The landscapers planted trees.,multiple
+Claude coaches hockey.,single
+The coaches planned strategies.,multiple
+Genevieve serves tea.,single
+The servers brought refreshments.,multiple
+Willard writes speeches.,single
+The speechwriters drafted remarks.,multiple
+Hazel sells antiques.,single
+The dealers appraised items.,multiple
+Vernon teaches chemistry.,single
+The chemists conducted research.,multiple
+Beulah cleans churches.,single
+The cleaners maintained buildings.,multiple
+Oscar repairs watches.,single
+The watchmakers fixed timepieces.,multiple
+Myrtle bakes rolls.,single
+The bakers prepared bread.,multiple
+Lester drives buses.,single
+The drivers followed schedules.,multiple
+Caroline teaches music.,single
+The musicians instructed students.,multiple
+Guy plays trumpet.,single
+The trumpeters performed pieces.,multiple
+Stella writes letters.,single
+The writers mailed correspondence.,multiple
+Wilbur delivers packages.,single
+The couriers made deliveries.,multiple
+Kathryn paints houses.,single
+The painters applied coatings.,multiple
+Arnold fixes cars.,single
+The mechanics repaired vehicles.,multiple
+Viola designs dresses.,single
+The designers created fashions.,multiple
+Morris coaches football.,single
+The coaches trained players.,multiple
+Mabel serves food.,single
+The servers attended tables.,multiple
+Norman writes code.,single
+The coders developed programs.,multiple
+Margie sells shoes.,single
+The salespeople assisted customers.,multiple
+Victor teaches history.,single
+The teachers planned lessons.,multiple
+Lucy cleans offices.,single
+The cleaners maintained spaces.,multiple
+Floyd repairs electronics.,single
+The technicians fixed devices.,multiple
+Minnie bakes cakes.,single
+The bakers decorated desserts.,multiple
+Leo drives taxis.,single
+The drivers transported passengers.,multiple
+Bessie teaches art.,single
+The artists instructed students.,multiple
+Willis plays guitar.,single
+The guitarists performed songs.,multiple
+Nellie writes stories.,single
+The writers published books.,multiple
+Archie delivers mail.,single
+The carriers sorted letters.,multiple
+Sylvia paints murals.,single
+The painters created artwork.,multiple
+Melvin fixes roofs.,single
+The roofers completed repairs.,multiple

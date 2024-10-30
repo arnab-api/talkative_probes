@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Literal
 from datasets import load_dataset
 import logging
+import pandas as pd
 
 import src.utils.env_utils as env_utils
 
@@ -341,6 +342,57 @@ class TenseDatasetLoader(DatasetLoader):
         return context_qa
 
 
+class SingularPluralDatasetLoader(DatasetLoader):
+    GROUP_NAME = "singular_plural"
+    DATASET_NAME = "singular_plural"
+    DATASET_PATH = os.path.join(
+        env_utils.DEFAULT_DATA_DIR, "singular_plural", "singular_plural.csv"
+    )
+
+    def __init__(self):
+        super().__init__(self.__class__.GROUP_NAME, self.__class__.DATASET_NAME)
+
+    def load(self) -> ContextQASample:
+        context_qa: list[ContextQASample] = []
+        with open(self.DATASET_PATH, "r") as f:
+            df = pd.read_csv(f)
+        examples = df.to_dict(orient="records")
+
+        class_labels = {"single", "multiple"}
+        for example in examples:
+            questions = []
+            answers = []
+            correct_label = example["n_subjects"]
+            for idx in range(NUM_QA_PER_SAMPLE):
+                ans = random.choice([YES_TOKEN, NO_TOKEN])
+                incorrect_label = random.choice(list(class_labels - {correct_label}))
+                answers.append(ans)
+                if ans == YES_TOKEN:
+                    questions.append(
+                        "# "
+                        + random.choice(
+                            self.question_paraphrases[correct_label]
+                        ).format(correct_label)
+                    )
+                else:
+                    questions.append(
+                        "# "
+                        + random.choice(
+                            self.question_paraphrases[incorrect_label]
+                        ).format(incorrect_label)
+                    )
+
+            context_qa.append(
+                ContextQASample(
+                    context=example["sentence"],
+                    questions=questions,
+                    answers=answers,
+                )
+            )
+
+        return context_qa
+
+
 class LanguageIDDatasetLoader(DatasetLoader):
     GROUP_NAME = "language_identification"
     DATASET_NAME = "language_identification"
@@ -389,6 +441,7 @@ class DatasetManager:
             + [SstDatasetLoader(), MdGenderDatasetLoader(), AgNewsDatasetLoader()]
             + [TenseDatasetLoader()]
             + [LanguageIDDatasetLoader()]
+            + [SingularPluralDatasetLoader()]
         )
     }
 
