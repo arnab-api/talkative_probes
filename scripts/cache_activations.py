@@ -61,6 +61,17 @@ def cache_activations(
             batch_size=batch_size,
         )
 
+        if group_name in ["language_identification", "ag_news"]:
+            tokenization_kwargs = {
+                "padding": "max_length",
+                "max_length": 200,
+                "truncation": True,
+            }
+        else:
+            tokenization_kwargs = {
+                "padding": "longest",
+            }
+
         for batch_idx, batch in tqdm(enumerate(dataloader)):
             prompts = [context_qa.context for context_qa in batch]
             questions = [context_qa.questions for context_qa in batch]
@@ -72,6 +83,7 @@ def cache_activations(
                 interested_layer_indices=interested_layer_indices,
                 check_prediction=None,
                 on_token_occur=None,
+                tokenization_kwargs=tokenization_kwargs,
             )
 
             # ! Right now we are not doing any kind of filtering

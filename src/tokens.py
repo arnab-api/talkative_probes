@@ -74,6 +74,7 @@ def prepare_input(
     device: torch.device = "cpu",
     add_bos_token: bool = False,
     return_offsets_mapping=False,
+    padding: str = "longest",
     padding_side: Optional[Literal["left", "right"]] = None,
     **kwargs,
 ) -> TokenizerOutput:
@@ -98,7 +99,7 @@ def prepare_input(
         inputs = tokenizer(
             prompts,
             return_tensors="pt",
-            padding="longest",
+            padding=padding,
             return_offsets_mapping=return_offsets_mapping,
             **kwargs,
         )

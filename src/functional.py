@@ -694,6 +694,7 @@ def get_batch_concept_activations(
     interested_layer_indices: list[int] | None = None,
     check_prediction: list[str] | None = None,
     on_token_occur: tuple[str, int] | None = None,  # (tok, occur) =>
+    tokenization_kwargs: Optional[dict[str, Any]] = None,
 ) -> list[LatentCache]:
     """
     Get the concept activations for a batch of prompts
@@ -710,6 +711,7 @@ def get_batch_concept_activations(
         prompts=prompts,
         tokenizer=mt,
         padding_side="left",  # always left padding as we are interested in the last token
+        **(tokenization_kwargs or {}),
     )
 
     token_idx = -1

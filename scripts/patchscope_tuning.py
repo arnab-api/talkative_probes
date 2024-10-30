@@ -29,7 +29,10 @@ logger.info(f"{transformers.__version__=}")
 def prepare_batch_input(batch: list[ActivationSample], mt: ModelandTokenizer):
     batch_prompts = [b.question for b in batch]
     batch_tokenized = prepare_input(
-        prompts=batch_prompts, tokenizer=mt, return_offsets_mapping=True
+        prompts=batch_prompts,
+        tokenizer=mt,
+        return_offsets_mapping=True,
+        padding_side="left",
     )
 
     int_tok_idx = []
@@ -58,6 +61,16 @@ def prepare_batch_input(batch: list[ActivationSample], mt: ModelandTokenizer):
 
 @torch.inference_mode()
 def evaluate_batch(batch: list[ActivationSample], mt: ModelandTokenizer):
+
+    try:
+        batch_tokenized, int_tok_idx = prepare_batch_input(batch, mt)
+    except Exception as e:
+        logger.error(
+            f"bad batch, error while tokenizing: {[b.question for b in batch]}"
+        )
+        logger.info("Skipping this batch.")
+        return 0, 1
+
     batch_tokenized, int_tok_idx = prepare_batch_input(batch, mt)
     # logger.debug(f"{batch_tokenized.input_ids.shape=}")
     activations = [b.activation for b in batch]
@@ -93,7 +106,7 @@ def evaluate_batch(batch: list[ActivationSample], mt: ModelandTokenizer):
             correct_count += 1
 
     free_gpu_cache()
-    return correct_count
+    return correct_count, len(batch)
 
 
 @torch.inference_mode()
@@ -103,8 +116,9 @@ def evaluate(mt: ModelandTokenizer, eval_set: list[ActivationSample], batch_size
     for i in tqdm(range(0, len(eval_set), batch_size), desc="Evaluating"):
         batch = eval_set[i : i + batch_size]
         with torch.no_grad():
-            correct_count += evaluate_batch(batch, mt)
-            total_count += len(batch)
+            correct_batch, len_batch = evaluate_batch(batch, mt)
+            correct_count += correct_batch
+            total_count += len_batch
     return correct_count / total_count
 
 
@@ -228,7 +242,14 @@ def patchscope_finetune(
             logger.info(f"End of training data at step {step + 1}")
             break
 
-        batch_tokenized, int_tok_idx = prepare_batch_input(batch, mt)
+        try:
+            batch_tokenized, int_tok_idx = prepare_batch_input(batch, mt)
+        except Exception as e:
+            logger.error(
+                f"bad batch, error while tokenizing: {[b.question for b in batch]}"
+            )
+            logger.info("Skipping this batch.")
+            continue
 
         activations = [b.activation for b in batch]
 
@@ -287,7 +308,10 @@ def patchscope_finetune(
             )
             model.save_pretrained(new_checkpoint_path)
 
-    logger.info("Finished training.")
+    full_validation_accuracy = evaluate(mt, validate_act_loader, batch_size)
+    logger.info(
+        f"Finished training.... Validation Accuracy on full set: {full_validation_accuracy}"
+    )
     # Save the final model
     if len(os.listdir(checkpoint_save_dir)) > 0:
         last_checkpoint_path = os.path.join(
