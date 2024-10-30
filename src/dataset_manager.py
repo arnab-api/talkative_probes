@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Literal
 from datasets import load_dataset
 import logging
+from tqdm import tqdm
 
 import src.utils.env_utils as env_utils
 
@@ -144,6 +145,96 @@ class AgNewsDatasetLoader(DatasetLoader):
                         context=context, questions=questions, answers=answers
                     )
                 )
+        return examples
+
+
+class NerDatasetLoader(DatasetLoader):
+    GROUP_NAME = "ner"
+    DATASET_NAME = "ner"
+    DATA_FILES_PATH = os.path.join(env_utils.DEFAULT_DATA_DIR, "ner")
+
+    def __init__(self):
+        super().__init__(self.__class__.GROUP_NAME, self.__class__.DATASET_NAME)
+
+    def _get_qa_for_sentence(self, sentence, sentence_entities, all_entities):
+        context = " ".join(sentence)
+        questions = []
+        answers = []
+        
+        sentence_entities_set = set(sentence_entities)
+        paraphrases = random.sample(self.question_paraphrases, NUM_QA_PER_SAMPLE)
+        for paraphrase in paraphrases:
+            correct_label = random.choice(sentence_entities)
+
+            # Doing this in a loop is 2x faster than computing the set difference
+            incorrect_label = correct_label
+            while incorrect_label in sentence_entities_set:
+                incorrect_label = random.choice(all_entities)
+
+            question_label = random.choice((correct_label, incorrect_label))
+            question = "# " + paraphrase.format(question_label)
+            answer = YES_TOKEN if question_label == correct_label else NO_TOKEN
+            questions.append(question)
+            answers.append(answer)
+
+        return ContextQASample(
+            context=context,
+            questions=questions,
+            answers=answers
+        )
+
+    def load(self):
+        all_sentences = []
+        all_entities = set()
+        print("Reading NER dataset")
+        with open(
+                os.path.join(self.DATA_FILES_PATH, "ner.csv"),
+                encoding='unicode_escape'
+            ) as f:
+            reader = csv.DictReader(f)
+            current_sentence = []
+            sentence_entities = []
+            current_entity = []
+            for row in reader:
+                sentence_id = row["Sentence #"]
+                word = row["Word"]
+                tag = row["Tag"]
+
+                if sentence_id.strip() != "" and len(current_sentence) > 0:
+                    if len(current_entity) > 0:
+                        sentence_entities.append(" ".join(current_entity))
+                        current_entity = []
+                    all_sentences.append((current_sentence, sentence_entities))
+                    current_sentence = []
+                    sentence_entities = []
+                
+                current_sentence.append(word)
+
+                if (tag == "O" or tag.startswith("B")) and len(current_entity) > 0:
+                    entity = " ".join(current_entity)
+                    all_entities.add(entity)
+                    sentence_entities.append(" ".join(current_entity))
+                    current_entity = []
+                elif tag.startswith("B"):
+                    current_entity = []
+                    current_entity.append(word)
+                elif tag.startswith("I"):
+                    current_entity.append(word)
+
+            if len(current_sentence) > 0:
+                if len(current_entity) > 0:
+                    entity = " ".join(current_entity)
+                    all_entities.add(entity)
+                    sentence_entities.append(entity)
+                all_sentences.append((current_sentence, sentence_entities))
+                
+        examples = []
+        print("Processing NER dataset")
+        for sentence, sentence_entities in tqdm(all_sentences):
+            if len(sentence_entities) == 0:
+                continue
+            examples.append(
+                self._get_qa_for_sentence(sentence, sentence_entities, list(all_entities)))
         return examples
 
 
@@ -386,9 +477,14 @@ class DatasetManager:
         for dataset in (
             GeometryOfTruthDatasetLoader.get_all_loaders()
             + RelationDatasetLoader.get_all_loaders()
-            + [SstDatasetLoader(), MdGenderDatasetLoader(), AgNewsDatasetLoader()]
-            + [TenseDatasetLoader()]
-            + [LanguageIDDatasetLoader()]
+            + [
+                SstDatasetLoader(),
+                MdGenderDatasetLoader(),
+                AgNewsDatasetLoader(),
+                NerDatasetLoader(),
+                TenseDatasetLoader(),
+                LanguageIDDatasetLoader()
+              ]
         )
     }
 
