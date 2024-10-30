@@ -32,6 +32,7 @@ def cache_activations(
     interested_layer_indices: list[int] = list(range(5, 20)),
     latent_cache_dir: str = "cached_latents",
     batch_size: int = 32,
+    limit_samples: Optional[int] = None,
 ):
     # Initialize model and tokenizer
     mt = ModelandTokenizer(
@@ -45,6 +46,8 @@ def cache_activations(
         model_key.split("/")[-1],
     )
     os.makedirs(cache_dir, exist_ok=True)
+
+    counter = 0
 
     for group_name, dataset_name in dataset_names:
         group_dir = os.path.join(cache_dir, group_name)
@@ -83,11 +86,15 @@ def cache_activations(
             with open(os.path.join(data_dir, f"batch_{batch_idx}.json"), "w") as f:
                 f.write(lcc.to_json())
 
+            counter += len(latents)
+            if limit_samples is not None and counter >= limit_samples:
+                break
+
         logger.info(
             f"|>> done caching activations for {group_name=} {dataset_name=} in {data_dir}"
         )
 
-    logger.info(f"Finished caching activations for {model_key}")
+    logger.info(f"cached {counter} samples in {cache_dir}")
 
 
 if __name__ == "__main__":
@@ -114,7 +121,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--dataset_group",
         type=str,
-        choices=["relations", "sst2", "geometry_of_truth"],
+        choices=list(DatasetManager.list_datasets_by_group().keys()),
         default=None,  # if specified wll override dataset
     )
     parser.add_argument(
@@ -134,6 +141,12 @@ if __name__ == "__main__":
         type=str,
         help="The directory to save the latent caches.",
         default="cached_latents",
+    )
+    parser.add_argument(
+        "--limit_samples",
+        type=int,
+        help="The maximum number of samples to cache.",
+        default=20000,
     )
 
     args = parser.parse_args()
@@ -162,4 +175,5 @@ if __name__ == "__main__":
         interested_layer_indices=interested_layers,
         batch_size=args.batch_size,
         latent_cache_dir=args.latent_cache_dir,
+        limit_samples=args.limit_samples,
     )
