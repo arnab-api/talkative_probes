@@ -86,6 +86,7 @@ def prepare_input(
     calculate_offsets = return_offsets_mapping and (
         isinstance(tokenizer, ModelandTokenizer) and "llama-3" in tokenizer.name.lower()
     )
+    # calculate_offsets = False
 
     tokenizer = unwrap_tokenizer(tokenizer)
     prompts = [prompts] if isinstance(prompts, str) else prompts
