@@ -69,7 +69,7 @@
         "Are you saying this is correct?"
     ],
     "sst2": {
-        "positive" : [
+        "positive": [
             "Is this a positive review?",
             "This review is positive. Do you agree?",
             "Does this review express positive sentiment?",
@@ -94,7 +94,7 @@
             "Does this review indicate a good experience?",
             "Is the general sentiment of this review positive?"
         ],
-        "negative" : [
+        "negative": [
             "Is this a negative review?",
             "This review is negative. Do you agree?",
             "Does this review express negative sentiment?",
@@ -144,5 +144,19 @@
         "Can you confirm the accuracy of this?",
         "Do you find this to be truthful?",
         "Are you saying this is correct?"
+    ],
+    "tense": [
+        "Is this statement in the {} tense?",
+        "This statement is in the {} tense. Do you agree?",
+        "Does this sentence use the {} tense?",
+        "Would you say this is written in the {} tense?",
+        "Is the verb form in this sentence {}?",
+        "Can we classify this sentence as being in the {} tense?",
+        "Is the action described here in the {} tense?",
+        "Would you identify this as an example of the {} tense?",
+        "Does this text reflect the {} tense?",
+        "Is the narrative presented in the {} tense?",
+        "Am I correct in saying this is in the {} tense?",
+        "Does this sentence convey the {} tense?"
     ]
 }

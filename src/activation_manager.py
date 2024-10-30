@@ -89,8 +89,16 @@ class ActivationLoader:
         if self.current_file_idx >= len(self.latent_cache_files):
             return False
 
-        with open(self.latent_cache_files[self.current_file_idx], "r") as f:
-            lcc = LatentCacheCollection.from_json(f.read())
+        try:
+            with open(self.latent_cache_files[self.current_file_idx], "r") as f:
+                lcc = LatentCacheCollection.from_json(f.read())
+        except Exception as e:
+            logger.error(
+                f"Bad JSON in {self.latent_cache_files[self.current_file_idx]}: {e}"
+            )
+            logger.info(f"skipping to next file")
+            self.current_file_idx += 1
+            return self.load_next_file()
 
         add_to_buffer = []
         for latent_cache in lcc.latents:

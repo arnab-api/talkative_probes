@@ -23,7 +23,7 @@ class ContextQASample:
     context: str
     questions: list[str]
     answers: list[str]
-    
+
     def __post_init__(self):
         for q, a in zip(self.questions, self.answers):
             assert a in (YES_TOKEN, NO_TOKEN)
@@ -58,7 +58,9 @@ class MdGenderDatasetLoader(DatasetLoader):
         female_count = 0
         for split in ("train", "validation", "test"):
             for text, entity, gender in zip(
-                dataset[split]["text"], dataset[split]["title"], dataset[split]["gender"]
+                dataset[split]["text"],
+                dataset[split]["title"],
+                dataset[split]["gender"],
             ):
                 if gender == 0:
                     # skip gender-neutral
@@ -70,7 +72,7 @@ class MdGenderDatasetLoader(DatasetLoader):
 
         # Shuffle and go through examples again to balance the labels
         random.shuffle(all_examples)
-        
+
         result = []
         male_count = 0
         for text, entity, context_label in all_examples:
@@ -92,9 +94,7 @@ class MdGenderDatasetLoader(DatasetLoader):
             context = f"{text}\n\nThis text is about {entity}."
 
             result.append(
-                ContextQASample(
-                    context=context, questions=questions, answers=answers
-                )
+                ContextQASample(context=context, questions=questions, answers=answers)
             )
         return result
 
@@ -109,10 +109,10 @@ class AgNewsDatasetLoader(DatasetLoader):
 
     def load(self):
         label_to_topic = {
-            "1" : "World News",
-            "2" : "Sports",
-            "3" : "Business",
-            "4" : "Science/Technology"
+            "1": "World News",
+            "2": "Sports",
+            "3": "Business",
+            "4": "Science/Technology",
         }
         labels = set(label_to_topic.keys())
         examples = []
@@ -127,8 +127,10 @@ class AgNewsDatasetLoader(DatasetLoader):
                 context = f"{title}\n\n{description}"
                 questions = []
                 answers = []
-                
-                paraphrases = random.sample(self.question_paraphrases, NUM_QA_PER_SAMPLE)
+
+                paraphrases = random.sample(
+                    self.question_paraphrases, NUM_QA_PER_SAMPLE
+                )
                 for paraphrase in paraphrases:
                     incorrect_label = random.choice(list(labels - {correct_label}))
                     question_label = random.choice((correct_label, incorrect_label))
@@ -137,9 +139,11 @@ class AgNewsDatasetLoader(DatasetLoader):
                     questions.append(question)
                     answers.append(answer)
 
-                examples.append(ContextQASample(
-                    context=context, questions=questions, answers=answers
-                ))
+                examples.append(
+                    ContextQASample(
+                        context=context, questions=questions, answers=answers
+                    )
+                )
         return examples
 
 
@@ -166,7 +170,9 @@ class GeometryOfTruthDatasetLoader(DatasetLoader):
             reader = csv.DictReader(f)
             for row in reader:
                 questions = []
-                paraphrases = random.sample(self.question_paraphrases, NUM_QA_PER_SAMPLE)
+                paraphrases = random.sample(
+                    self.question_paraphrases, NUM_QA_PER_SAMPLE
+                )
                 for paraphrase in paraphrases:
                     question = "# " + paraphrase
                     questions.append(question)
@@ -210,7 +216,9 @@ class SstDatasetLoader(DatasetLoader):
                 questions = []
                 answers = []
                 paraphrases = {
-                    label : random.sample(self.question_paraphrases[label], NUM_QA_PER_SAMPLE)
+                    label: random.sample(
+                        self.question_paraphrases[label], NUM_QA_PER_SAMPLE
+                    )
                     for label in ("positive", "negative")
                 }
                 for i in range(NUM_QA_PER_SAMPLE):
@@ -290,17 +298,57 @@ class RelationDatasetLoader(DatasetLoader):
         return loaders
 
 
+class TenseDatasetLoader(DatasetLoader):
+    GROUP_NAME = "tense"
+    DATASET_NAME = "tense"
+    DATASET_PATH = os.path.join(
+        env_utils.DEFAULT_DATA_DIR, "tense", "tense_processed.json"
+    )
+
+    def __init__(self):
+        super().__init__(self.__class__.GROUP_NAME, self.__class__.DATASET_NAME)
+
+    def load(self) -> ContextQASample:
+        context_qa: list[ContextQASample] = []
+        with open(self.DATASET_PATH, "r") as f:
+            examples = json.load(f)
+
+        class_labels = set([sample["label"] for sample in examples])
+        for example in examples:
+            questions = []
+            answers = []
+            correct_label = example["label"]
+            for idx in range(NUM_QA_PER_SAMPLE):
+                ans = random.choice([YES_TOKEN, NO_TOKEN])
+                ques = "# " + random.choice(self.question_paraphrases)
+                answers.append(ans)
+                if ans == YES_TOKEN:
+                    questions.append(ques.format(correct_label))
+                else:
+                    incorrect_label = random.choice(
+                        list(class_labels - {correct_label})
+                    )
+                    questions.append(ques.format(incorrect_label))
+
+            context_qa.append(
+                ContextQASample(
+                    context=example["sentence"],
+                    questions=questions,
+                    answers=answers,
+                )
+            )
+
+        return context_qa
+
+
 class DatasetManager:
     supported_datasets: dict[tuple[str, str], DatasetLoader] = {
         (dataset.group, dataset.name): dataset
         for dataset in (
             GeometryOfTruthDatasetLoader.get_all_loaders()
             + RelationDatasetLoader.get_all_loaders()
-            + [
-                SstDatasetLoader(),
-                MdGenderDatasetLoader(),
-                AgNewsDatasetLoader()
-              ]
+            + [SstDatasetLoader(), MdGenderDatasetLoader(), AgNewsDatasetLoader()]
+            + [TenseDatasetLoader()]
         )
     }
 
