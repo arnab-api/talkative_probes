@@ -21,6 +21,19 @@
         "Does this portray a {} individual?",
         "Is this describing a {} person?"
     ],
+    "snli" : [
+        "Is the next sentence logically consistent with what came before?",
+        "Based on what was just stated, is this a reasonable follow-up?",
+        "Following that statement, does this next part flow naturally?",
+        "Would the following sentence align with what we just read?",
+        "Does this next sentence fit with the preceding context?",
+        "Is there logical continuity between these sentences?",
+        "After reading the first sentence, is the second one coherent?",
+        "Looking at the previous context, does this next part hold up?",
+        "With that setup, does the following sentence work?",
+        "Building on that last sentence, does this next one make sense?",
+        "Would you say these two sentences connect logically?"
+    ],
     "ag_news": [
         "Would you say this piece focuses on {}?",
         "Does this article primarily address {}?",
