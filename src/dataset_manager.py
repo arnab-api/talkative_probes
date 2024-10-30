@@ -101,6 +101,42 @@ class MdGenderDatasetLoader(DatasetLoader):
         return result
 
 
+class SnliDatasetLoader(DatasetLoader):
+    GROUP_NAME = "snli"
+    DATASET_NAME = "snli"
+
+    def __init__(self):
+        super().__init__(self.__class__.GROUP_NAME, self.__class__.DATASET_NAME)
+
+    def load(self):
+        print("Loading SNLI dataset")
+        dataset = load_dataset("stanfordnlp/snli")["train"]
+        examples = []
+        for example in tqdm(dataset):
+            if example["label"] not in (0, 2):
+                # skip neutral
+                continue
+            
+            answer = {
+                0: YES_TOKEN,
+                2: NO_TOKEN
+            }[example["label"]]
+
+            paraphrases = random.sample(self.question_paraphrases, NUM_QA_PER_SAMPLE)
+            questions = []
+            for paraphrase in paraphrases:
+                question = f"# {paraphrase} {example['hypothesis']}"
+                questions.append(question)
+
+            examples.append(ContextQASample(
+                context=example["premise"],
+                questions=questions,
+                answers=[answer] * NUM_QA_PER_SAMPLE
+            ))
+
+        return examples
+
+
 class AgNewsDatasetLoader(DatasetLoader):
     GROUP_NAME = "ag_news"
     DATASET_NAME = "ag_news"
@@ -530,6 +566,7 @@ class DatasetManager:
             + [
                 SstDatasetLoader(),
                 MdGenderDatasetLoader(),
+                SnliDatasetLoader(),
                 AgNewsDatasetLoader(),
                 NerDatasetLoader(),
                 TenseDatasetLoader(),
