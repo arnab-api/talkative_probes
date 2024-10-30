@@ -111,7 +111,7 @@ def evaluate(mt: ModelandTokenizer, eval_set: list[ActivationSample], batch_size
 def get_validation_set(validate_act_loader: ActivationLoader, num: int = 200):
     cur_eval_batch = []
     cur_eval_loader = ActivationLoader(
-        latent_cache_files=random.choices(validate_act_loader.latent_cache_files, k=25),
+        latent_cache_files=random.choices(validate_act_loader.latent_cache_files, k=50),
         batch_size=validate_act_loader.batch_size,
         name="CurEvalLoader",
     )
@@ -264,7 +264,7 @@ def patchscope_finetune(
         free_gpu_cache()
 
         if (step + 1) % log_steps == 0:
-            cur_eval_batch = get_validation_set(validate_act_loader, 500)
+            cur_eval_batch = get_validation_set(validate_act_loader, 1500)
             eval_accuracy = evaluate(mt, cur_eval_batch)
             log_data = {
                 "loss": loss.item(),

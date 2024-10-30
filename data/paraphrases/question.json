@@ -157,6 +157,32 @@
         "Does this text reflect the {} tense?",
         "Is the narrative presented in the {} tense?",
         "Am I correct in saying this is in the {} tense?",
-        "Does this sentence convey the {} tense?"
+        "Does this sentence convey the {} tense?",
+        "Is the structure of this sentence indicative of the {} tense?",
+        "Can we determine that this is in the {} tense?",
+        "Is the time frame of this statement {}?",
+        "Does this sentence align with the {} tense?",
+        "Is the action taking place in the {} tense?",
+        "Would you agree that this is in the {} tense?"
+    ],
+    "language_identification": [
+        "Is this text written in {}?",
+        "Does this passage use {}?",
+        "Can we say this is in {}?",
+        "Would you identify this text as being in {}?",
+        "Is the language of this text {}?",
+        "Is this written in the language {}?",
+        "Can we confirm this is in {}?",
+        "Am I correct in saying this is in {}?",
+        "Would you classify this as written in {}?",
+        "Is the primary language of this text {}?",
+        "Is the language used here {}?",
+        "Would you agree that this is in {}?",
+        "Is this text predominantly in {}?",
+        "Does this writing reflect the language {}?",
+        "Is the content of this text in {}?",
+        "Can we determine that this is in {}?",
+        "Is the text presented in {}?",
+        "Is this passage composed in {}?"
     ]
 }

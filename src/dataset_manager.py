@@ -341,6 +341,45 @@ class TenseDatasetLoader(DatasetLoader):
         return context_qa
 
 
+class LanguageIDDatasetLoader(DatasetLoader):
+    GROUP_NAME = "language_identification"
+    DATASET_NAME = "language_identification"
+
+    def __init__(self):
+        super().__init__(self.__class__.GROUP_NAME, self.__class__.DATASET_NAME)
+
+    def load(self) -> ContextQASample:
+        hf_dataset = load_dataset("FrancophonIA/WiLI-2018")["train"]
+        context_qa: list[ContextQASample] = []
+        class_labels = set(hf_dataset[:]["language"])
+
+        for example in hf_dataset:
+            questions = []
+            answers = []
+            correct_label = example["language"]
+            for idx in range(NUM_QA_PER_SAMPLE):
+                ans = random.choice([YES_TOKEN, NO_TOKEN])
+                ques = "# " + random.choice(self.question_paraphrases)
+                answers.append(ans)
+                if ans == YES_TOKEN:
+                    questions.append(ques.format(correct_label))
+                else:
+                    incorrect_label = random.choice(
+                        list(class_labels - {correct_label})
+                    )
+                    questions.append(ques.format(incorrect_label))
+
+            context_qa.append(
+                ContextQASample(
+                    context=example["Text"],
+                    questions=questions,
+                    answers=answers,
+                )
+            )
+
+        return context_qa
+
+
 class DatasetManager:
     supported_datasets: dict[tuple[str, str], DatasetLoader] = {
         (dataset.group, dataset.name): dataset
@@ -349,6 +388,7 @@ class DatasetManager:
             + RelationDatasetLoader.get_all_loaders()
             + [SstDatasetLoader(), MdGenderDatasetLoader(), AgNewsDatasetLoader()]
             + [TenseDatasetLoader()]
+            + [LanguageIDDatasetLoader()]
         )
     }
 
