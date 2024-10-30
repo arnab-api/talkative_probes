@@ -7,6 +7,7 @@ import src.tokens as tokens
 from src.utils.typing import PredictedToken
 from src.models import ModelandTokenizer
 import proto.patchscope_pb2 as patchscope_pb2
+from src.dataset_manager import DatasetManager
 
 def get_source_hs(mt, input_, layers):
     locations = [(mt.layer_name_format.format(layer), input_.input_ids.shape[1] - 1)
@@ -68,21 +69,26 @@ class EvaluationRunner():
                  encoder_mt: ModelandTokenizer,
                  decoder_mt: ModelandTokenizer | None = None):
         self.config = config
+        interested_tokens = [" Yes", " No"]
         self.patchscope_runner = PatchscopeRunner(encoder_mt,
                                                   decoder_mt,
                                                   config.patchscope_config,
-                                                  dict(config.label_to_token).values())
+                                                  interested_tokens)
 
     def evaluate(self,
-                 examples: list[tuple[str, any]]) -> float:
+                 dataset: DatasetManager) -> float:
         num_correct = 0
         num_total = 0
-        for example, label in tqdm(examples):
-            label_token = self.config.label_to_token[label]
-            pred_token = self.patchscope_runner.run(example, self.config.target_prompt)
-            if pred_token.token == label_token:
-                num_correct += 1
-            num_total += 1
+        for batch in tqdm(dataset):
+            # TODO(daniel): Batch the code
+            for sample in batch:
+                placeholder_string = " ".join(["placeholder"] * 5)
+                question = placeholder_string + sample.questions[0][1:]
+                answer = sample.answers[0]
+                pred_token = self.patchscope_runner.run(sample.context, question)
+                if pred_token.token.strip() == answer:
+                    num_correct += 1
+                num_total += 1
         accuracy = num_correct / num_total
         return patchscope_pb2.EvaluationResult(
             config=self.config,
