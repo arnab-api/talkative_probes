@@ -107,7 +107,7 @@ def get_train_eval_loaders(
                 get_batch_paths(os.path.join(latent_dir, group_dir))
             )
     random.shuffle(id_act_batch_paths)
-    train_split = int(len(id_act_batch_paths) * 0.9)
+    train_split = int(len(id_act_batch_paths) * 0.8)
     train_act_batch_paths = id_act_batch_paths[:train_split]
     id_val_act_batch_paths = id_act_batch_paths[train_split:]
     logger.info(f"{len(id_val_act_batch_paths)} ID batch paths will be loaded")
