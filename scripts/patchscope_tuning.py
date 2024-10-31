@@ -57,7 +57,7 @@ def remove_dir(path):
 def patchscope_finetune(
     model_key: str,
     # layers_of_interest: list[int] = list(range(8, 20)),
-    checkpoint_save_dir: str = "patchscope_test",
+    checkpoint_save_dir: str = "patchscope",
     num_final_layers_to_tune: int = 10,
     wandb_logging=True,
     batch_size=32,
@@ -81,14 +81,17 @@ def patchscope_finetune(
     )
     ###################################################################################
     checkpoint_save_dir = os.path.join(
-        env_utils.DEFAULT_RESULTS_DIR, checkpoint_save_dir, model_key.split("/")[-1]
+        env_utils.DEFAULT_RESULTS_DIR,
+        checkpoint_save_dir,
+        model_key.split("/")[-1],
+        eval_dataset,
     )
     os.makedirs(checkpoint_save_dir, exist_ok=True)
     model = mt._model
     model.train()
     ############################## Hyperparameters ##############################
     learning_rate = 5e-5
-    log_steps = 50
+    log_steps = 100
     checkpoint_interval = 1000
     num_warmup_steps = 1000
     limit_training_steps = 16000
@@ -97,7 +100,7 @@ def patchscope_finetune(
         wandb.init(
             entity="talkative_probes",
             project="talkative_probes",
-            name=f"{model_key.split('/')[-1]}_patchscope_tune",
+            name=f"{model_key.split('/')[-1]}_patchscope_{eval_dataset}",
             config={
                 "model_key": model_key.split("/")[-1],
                 "learning_rate": learning_rate,
@@ -189,7 +192,7 @@ def patchscope_finetune(
                 "loss": loss.item(),
                 "learning_rate": scheduler.get_last_lr()[0],
                 "id_eval_accuracy": id_eval_accuracy,
-                "ood_eval_accuracy": ood_eval_accuracy
+                "ood_eval_accuracy": ood_eval_accuracy,
             }
             logger.info(f"Step {step + 1}: {log_data}")
             if wandb_logging:
@@ -207,8 +210,10 @@ def patchscope_finetune(
             )
             model.save_pretrained(new_checkpoint_path)
 
+    ood_validation_accuracy = evaluate(
+        mt, ood_act_loader, batch_size, logging_steps=1000
+    )
     id_validation_accuracy = evaluate(mt, id_val_act_loader, batch_size)
-    ood_validation_accuracy = evaluate(mt, ood_act_loader, batch_size)
     logger.info(
         f"Finished training.... Validation Accuracy on full set (ID/OOD): {id_validation_accuracy} / {ood_validation_accuracy}"
     )

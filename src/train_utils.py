@@ -73,7 +73,7 @@ def get_train_eval_loaders(
         latent_cache_files=ood_act_batch_paths,
         batch_size=batch_size,
         shuffle=True,
-        name="OODValidateLoader"
+        name="OODValidateLoader",
     )
 
     id_act_batch_paths = []
@@ -157,15 +157,52 @@ def evaluate_batch(batch: list[ActivationSample], mt: ModelandTokenizer):
 
 
 @torch.inference_mode()
-def evaluate(mt: ModelandTokenizer, eval_set: list[ActivationSample], batch_size=32):
+def evaluate(
+    mt: ModelandTokenizer,
+    eval_set: list[ActivationSample] | ActivationLoader,
+    batch_size=32,
+    limit_samples: int | None = None,
+    logging_steps: int = 10,
+):
     correct_count = 0
     total_count = 0
-    for i in tqdm(range(0, len(eval_set), batch_size), desc="Evaluating"):
-        batch = eval_set[i : i + batch_size]
-        with torch.no_grad():
-            correct_batch, len_batch = evaluate_batch(batch, mt)
-            correct_count += correct_batch
-            total_count += len_batch
+    step = 0
+    if isinstance(eval_set, ActivationLoader):
+        while True:
+            try:
+                batch = eval_set.next_batch()
+                correct_batch, len_batch = evaluate_batch(batch, mt)
+                correct_count += correct_batch
+                total_count += len_batch
+            except StopIteration:
+                break
+
+            if limit_samples is not None and total_count >= limit_samples:
+                break
+
+            step += 1
+            if step % logging_steps == 0:
+                logger.info(
+                    f"Accuracy={correct_count/total_count}({correct_count}/{total_count})"
+                )
+
+    else:
+        for i in tqdm(range(0, len(eval_set), batch_size), desc="Evaluating"):
+            batch = eval_set[i : i + batch_size]
+            with torch.no_grad():
+                correct_batch, len_batch = evaluate_batch(batch, mt)
+                correct_count += correct_batch
+                total_count += len_batch
+
+            if limit_samples is not None and total_count >= limit_samples:
+                break
+
+            step += 1
+            if step % logging_steps == 0:
+                logger.info(
+                    f"Accuracy={correct_count/total_count}({correct_count}/{total_count})"
+                )
+
     return correct_count / total_count
 
 

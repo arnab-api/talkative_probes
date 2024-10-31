@@ -51,7 +51,9 @@ def cache_activations(
         os.makedirs(group_dir, exist_ok=True)
 
         counter = 0
-        dataloader = DatasetManager.from_dataset_group(group_name, batch_size=batch_size)
+        dataloader = DatasetManager.from_dataset_group(
+            group_name, batch_size=batch_size
+        )
 
         if group_name in ["language_identification", "ag_news"]:
             tokenization_kwargs = {
@@ -94,9 +96,7 @@ def cache_activations(
             if limit_samples is not None and counter >= limit_samples:
                 break
 
-        logger.info(
-            f"|>> done caching activations for {group_name=} in {group_dir}"
-        )
+        logger.info(f"|>> done caching activations for {group_name=} in {group_dir}")
 
     logger.info(f"cached {counter} samples in {cache_dir}")
 
@@ -127,7 +127,7 @@ if __name__ == "__main__":
         "--interested_layers",
         type=str,
         help="The layers to cache activations for.",
-        default="7-17",
+        default="10-24",
     )
     parser.add_argument(
         "--latent_cache_dir",
