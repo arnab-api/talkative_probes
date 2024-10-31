@@ -6,6 +6,7 @@ import os
 import torch
 import logging
 import json
+import pickle
 from src.utils import env_utils
 
 logger = logging.getLogger(__name__)
@@ -35,6 +36,7 @@ class ActivationLoader:
         batch_size: int = 32,
         name: str = "ActivationLoader",
         logging: bool = False,
+        device: torch.device | None = None,
     ):
         self.latent_cache_files = []
         for file_path in latent_cache_files:
@@ -42,7 +44,7 @@ class ActivationLoader:
                 logger.error(f"{file_path} not found")
                 continue
             if os.path.isdir(file_path) == True:
-                raise logger.error(f"{file_path} should be a json file")
+                raise logger.error(f"{file_path} should be a file")
             self.latent_cache_files.append(file_path)
 
         if shuffle:
@@ -54,6 +56,7 @@ class ActivationLoader:
         self.buffer: list[ActivationSample] = []
         self.batch_size = batch_size
         self.stop_iteration = False
+        self.device = device
 
         with open(
             os.path.join(env_utils.DEFAULT_DATA_DIR, "paraphrases/yes_no.json"), "r"
@@ -90,12 +93,17 @@ class ActivationLoader:
             return False
 
         try:
-            with open(self.latent_cache_files[self.current_file_idx], "r") as f:
-                lcc = LatentCacheCollection.from_json(f.read())
-                lcc.retensorize()
+            file_path = self.latent_cache_files[self.current_file_idx]
+            if file_path.endswith(".pkl"):
+                with open(file_path, "rb") as f:
+                    lcc = pickle.load(f)
+            else:
+                with open(file_path, "r") as f:
+                    lcc = LatentCacheCollection.from_json(f.read())
+            lcc.retensorize(device=self.device)
         except Exception as e:
             logger.error(
-                f"Bad JSON in {self.latent_cache_files[self.current_file_idx]}: {e}"
+                f"Bad file in {self.latent_cache_files[self.current_file_idx]}: {e}"
             )
             logger.info(f"skipping to next file")
             self.current_file_idx += 1
@@ -156,5 +164,5 @@ def get_batch_paths(
 ):
     for root, _, files in os.walk(root):
         for file in files:
-            if file.endswith(".json"):
+            if file.endswith(".pkl") or file.endswith(".json"):
                 yield os.path.join(root, file)
