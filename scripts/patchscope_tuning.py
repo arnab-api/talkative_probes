@@ -108,6 +108,11 @@ def patchscope_finetune(
             },
         )
 
+    for layer_name in mt.layer_names[:-num_final_layers_to_tune]:
+        module = baukit.get_module(model, layer_name)
+        for param in module.parameters():
+            param.requires_grad = False
+
     tunable_params = []
     for layer_name in mt.layer_names[-num_final_layers_to_tune:]:
         module = baukit.get_module(model, layer_name)
