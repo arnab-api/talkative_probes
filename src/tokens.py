@@ -197,7 +197,7 @@ def find_token_range(
     if offset_mapping is None:
         assert tokenizer is not None
         tokens = prepare_input(
-            string, return_offset_mapping=True, tokenizer=tokenizer, **kwargs
+            string, return_offsets_mapping=True, tokenizer=tokenizer, **kwargs
         )
         offset_mapping = tokens.offset_mapping[0]
 

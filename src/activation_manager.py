@@ -92,6 +92,7 @@ class ActivationLoader:
         try:
             with open(self.latent_cache_files[self.current_file_idx], "r") as f:
                 lcc = LatentCacheCollection.from_json(f.read())
+                lcc.retensorize()
         except Exception as e:
             logger.error(
                 f"Bad JSON in {self.latent_cache_files[self.current_file_idx]}: {e}"

@@ -105,7 +105,7 @@ def patchscope(
             placeholder_range = find_token_range(
                 string=target_prompt,
                 substring=placeholder_token,
-                tokenizer=mt.tokenizer,
+                tokenizer=mt,
                 occurrence=i,
                 offset_mapping=input["offset_mapping"][0],
             )
