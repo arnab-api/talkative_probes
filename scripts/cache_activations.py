@@ -33,11 +33,13 @@ def cache_activations(
     batch_size: int = 32,
     limit_samples: Optional[int] = None,
     use_pickle: bool = False,
+    device: str = "auto",
 ):
     # Initialize model and tokenizer
     mt = ModelandTokenizer(
         model_key=model_key,
         torch_dtype=torch.float32,
+        device_map=device,
     )
 
     cache_dir = os.path.join(
@@ -153,6 +155,12 @@ if __name__ == "__main__":
         help="Whether to use pickle to write files. Otherwise use json.",
         default=False,
     )
+    parser.add_argument(
+        "--device",
+        type=str,
+        help="Which device to use. E.g. cuda:0, cuda:1, etc",
+        default="auto",
+    )
 
     args = parser.parse_args()
     logging_utils.configure(args)
@@ -171,5 +179,6 @@ if __name__ == "__main__":
         batch_size=args.batch_size,
         latent_cache_dir=args.latent_cache_dir,
         limit_samples=args.limit_samples,
-        use_pickle=args.use_pickle
+        use_pickle=args.use_pickle,
+        device=args.device,
     )
