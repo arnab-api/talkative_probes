@@ -59,31 +59,34 @@ def prepare_batch_input(batch: list[ActivationSample], mt: ModelandTokenizer):
 
 
 def get_train_eval_loaders(
-    latent_dir: str, eval_dataset_group: str | None = None, batch_size: int = 32
+    latent_dir: str, ood_dataset_group: str | None = None, batch_size: int = 32
 ) -> tuple[ActivationLoader, ActivationLoader]:
     """
     returns ActivationLoaders for training and validation
     """
-    if eval_dataset_group is None:
-        activation_batch_paths = list(get_batch_paths(latent_dir))
-        random.shuffle(activation_batch_paths)
-        train_split = int(len(activation_batch_paths) * 0.8)
-        train_act_batch_paths = activation_batch_paths[:train_split]
-        val_act_batch_paths = activation_batch_paths[train_split:]
-    else:
-        assert eval_dataset_group in DatasetManager.list_datasets_by_group()
-        val_act_batch_paths = list(
-            get_batch_paths(os.path.join(latent_dir, eval_dataset_group))
-        )
-        train_act_batch_paths = []
-        for group_dir in os.listdir(os.path.join(latent_dir)):
-            if group_dir != eval_dataset_group:
-                train_act_batch_paths.extend(
-                    get_batch_paths(os.path.join(latent_dir, group_dir))
-                )
+    assert ood_dataset_group in DatasetManager.list_datasets_by_group()
+    ood_act_batch_paths = list(
+        get_batch_paths(os.path.join(latent_dir, ood_dataset_group))
+    )
+    random.shuffle(ood_act_batch_paths)
+    ood_act_loader = ActivationLoader(
+        latent_cache_files=ood_act_batch_paths,
+        batch_size=batch_size,
+        shuffle=True,
+        name="OODValidateLoader"
+    )
 
-    random.shuffle(train_act_batch_paths)
-    random.shuffle(val_act_batch_paths)
+    id_act_batch_paths = []
+    for group_dir in os.listdir(os.path.join(latent_dir)):
+        if group_dir != ood_dataset_group:
+            id_act_batch_paths.extend(
+                get_batch_paths(os.path.join(latent_dir, group_dir))
+            )
+    random.shuffle(id_act_batch_paths)
+    train_split = int(len(id_act_batch_paths) * 0.8)
+    train_act_batch_paths = id_act_batch_paths[:train_split]
+    id_val_act_batch_paths = id_act_batch_paths[train_split:]
+
     train_act_loader = ActivationLoader(
         latent_cache_files=train_act_batch_paths,
         batch_size=batch_size,
@@ -92,14 +95,14 @@ def get_train_eval_loaders(
         # logging=True,
     )
 
-    validate_act_loader = ActivationLoader(
-        latent_cache_files=val_act_batch_paths,
+    id_val_act_loader = ActivationLoader(
+        latent_cache_files=id_val_act_batch_paths,
         batch_size=batch_size,
         shuffle=True,
-        name="ValidateLoader",
+        name="IDValidateLoader",
     )
 
-    return train_act_loader, validate_act_loader
+    return train_act_loader, id_val_act_loader, ood_act_loader
 
 
 ################################## EVALUATION ##################################

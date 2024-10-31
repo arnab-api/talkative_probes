@@ -76,8 +76,8 @@ def patchscope_finetune(
     )
 
     ############################## Load Activation Loader ##############################
-    train_act_loader, validate_act_loader = get_train_eval_loaders(
-        latent_dir=latent_dir, eval_dataset_group=eval_dataset, batch_size=batch_size
+    train_act_loader, id_val_act_loader, ood_act_loader = get_train_eval_loaders(
+        latent_dir=latent_dir, ood_dataset_group=eval_dataset, batch_size=batch_size
     )
     ###################################################################################
     checkpoint_save_dir = os.path.join(
@@ -91,7 +91,7 @@ def patchscope_finetune(
     log_steps = 50
     checkpoint_interval = 1000
     num_warmup_steps = 1000
-    limit_training_steps = 32000
+    limit_training_steps = 16000
     ############################################################################
     if wandb_logging:
         wandb.init(
@@ -181,12 +181,15 @@ def patchscope_finetune(
         free_gpu_cache()
 
         if (step + 1) % log_steps == 0:
-            cur_eval_batch = get_small_validation_set(validate_act_loader, 1000)
-            eval_accuracy = evaluate(mt, cur_eval_batch)
+            id_eval_batch = get_small_validation_set(id_val_act_loader, 1000)
+            ood_eval_batch = get_small_validation_set(ood_act_loader, 1000)
+            id_eval_accuracy = evaluate(mt, id_eval_batch)
+            ood_eval_accuracy = evaluate(mt, ood_eval_batch)
             log_data = {
                 "loss": loss.item(),
                 "learning_rate": scheduler.get_last_lr()[0],
-                "eval_accuracy": eval_accuracy,
+                "id_eval_accuracy": id_eval_accuracy,
+                "ood_eval_accuracy": ood_eval_accuracy
             }
             logger.info(f"Step {step + 1}: {log_data}")
             if wandb_logging:
@@ -204,9 +207,10 @@ def patchscope_finetune(
             )
             model.save_pretrained(new_checkpoint_path)
 
-    full_validation_accuracy = evaluate(mt, validate_act_loader, batch_size)
+    id_validation_accuracy = evaluate(mt, id_act_loader, batch_size)
+    ood_validation_accuracy = evaluate(mt, ood_act_loader, batch_size)
     logger.info(
-        f"Finished training.... Validation Accuracy on full set: {full_validation_accuracy}"
+        f"Finished training.... Validation Accuracy on full set (ID/OOD): {id_validation_accuracy} / {ood_validation_accuracy}"
     )
     # Save the final model
     if len(os.listdir(checkpoint_save_dir)) > 0:
