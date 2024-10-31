@@ -80,7 +80,10 @@ def patchscope_finetune(
 
     ############################## Load Activation Loader ##############################
     train_act_loader, id_val_act_loader, ood_act_loader = get_train_eval_loaders(
-        latent_dir=latent_dir, ood_dataset_group=eval_dataset, batch_size=batch_size
+        latent_dir=latent_dir,
+        ood_dataset_group=eval_dataset,
+        batch_size=batch_size,
+        device=None if device == "auto" else device
     )
     logger.info("Loading out-of-distribution validation set...")
     start = time.time()

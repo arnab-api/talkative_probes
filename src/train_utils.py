@@ -81,7 +81,10 @@ def prepare_batch_input(batch: list[ActivationSample], mt: ModelandTokenizer):
 
 
 def get_train_eval_loaders(
-    latent_dir: str, ood_dataset_group: str | None = None, batch_size: int = 32
+    latent_dir: str,
+    ood_dataset_group: str | None = None,
+    batch_size: int = 32,
+    device: str | None = None
 ) -> tuple[ActivationLoader, ActivationLoader]:
     """
     returns ActivationLoaders for training and validation
@@ -118,6 +121,7 @@ def get_train_eval_loaders(
         shuffle=True,
         name="TrainLoader",
         # logging=True,
+        device=device,
     )
 
     id_val_act_loader = ActivationLoader(
