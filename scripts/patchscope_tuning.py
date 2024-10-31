@@ -207,7 +207,7 @@ def patchscope_finetune(
             )
             model.save_pretrained(new_checkpoint_path)
 
-    id_validation_accuracy = evaluate(mt, id_act_loader, batch_size)
+    id_validation_accuracy = evaluate(mt, id_val_act_loader, batch_size)
     ood_validation_accuracy = evaluate(mt, ood_act_loader, batch_size)
     logger.info(
         f"Finished training.... Validation Accuracy on full set (ID/OOD): {id_validation_accuracy} / {ood_validation_accuracy}"
