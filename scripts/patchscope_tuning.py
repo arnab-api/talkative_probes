@@ -1,3 +1,4 @@
+import time
 import argparse
 import logging
 import os
@@ -18,7 +19,7 @@ from src.tokens import prepare_input, find_token_range
 from src.functional import free_gpu_cache
 from src.dataset_manager import DatasetManager
 from typing import Literal
-from src.train_utils import get_train_eval_loaders, evaluate, prepare_batch_input
+from src.train_utils import get_train_eval_loaders, evaluate, prepare_batch_input, RotatingLoader
 
 logger = logging.getLogger(__name__)
 logger.info(f"{torch.__version__=}, {torch.version.cuda=}")
@@ -79,6 +80,15 @@ def patchscope_finetune(
     train_act_loader, id_val_act_loader, ood_act_loader = get_train_eval_loaders(
         latent_dir=latent_dir, ood_dataset_group=eval_dataset, batch_size=batch_size
     )
+    logger.info("Loading out-of-distribution validation set...")
+    start = time.time()
+    ood_act_rotator = RotatingLoader(ood_act_loader, 1000)
+    logger.info(f"Done in {time.time() - start}")
+
+    logger.info("Loading in-distribution validation set...")
+    start = time.time()
+    id_val_act_rotator = RotatingLoader(id_val_act_loader, 1000)
+    logger.info(f"Done in {time.time() - start}")
     ###################################################################################
     checkpoint_save_dir = os.path.join(
         env_utils.DEFAULT_RESULTS_DIR,
@@ -184,10 +194,8 @@ def patchscope_finetune(
         free_gpu_cache()
 
         if (step + 1) % log_steps == 0:
-            id_eval_batch = get_small_validation_set(id_val_act_loader, 1000)
-            ood_eval_batch = get_small_validation_set(ood_act_loader, 1000)
-            id_eval_accuracy = evaluate(mt, id_eval_batch)
-            ood_eval_accuracy = evaluate(mt, ood_eval_batch)
+            id_eval_accuracy = evaluate(mt, id_val_act_rotator.next_batch())
+            ood_eval_accuracy = evaluate(mt, ood_act_rotator.next_batch())
             log_data = {
                 "loss": loss.item(),
                 "learning_rate": scheduler.get_last_lr()[0],
@@ -211,9 +219,9 @@ def patchscope_finetune(
             model.save_pretrained(new_checkpoint_path)
 
     ood_validation_accuracy = evaluate(
-        mt, ood_act_loader, batch_size, logging_steps=1000
+        mt, ood_act_rotator.get_n(10000), batch_size, logging_steps=1000
     )
-    id_validation_accuracy = evaluate(mt, id_val_act_loader, batch_size)
+    id_validation_accuracy = evaluate(mt, id_val_act_rotator.get_n(10000), batch_size)
     logger.info(
         f"Finished training.... Validation Accuracy on full set (ID/OOD): {id_validation_accuracy} / {ood_validation_accuracy}"
     )

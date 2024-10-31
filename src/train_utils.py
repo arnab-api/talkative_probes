@@ -22,6 +22,28 @@ from typing import Literal
 logger = logging.getLogger(__name__)
 
 
+class RotatingLoader:
+    def __init__(self, act_loader: ActivationLoader, batch_size):
+        self.samples = []
+        self.batch_size = batch_size
+        self.current_idx = 0
+        while True:
+            try:
+                self.samples.extend(act_loader.next_batch())
+            except StopIteration:
+                break
+        random.shuffle(self.samples)
+    
+    def next_batch(self):
+        if self.current_idx + self.batch_size >= len(self.samples):
+            self.current_idx = 0
+            random.shuffle(self.samples)
+        return self.samples[self.current_idx : self.current_idx + self.batch_size]
+
+    def get_n(self, n):
+        return self.samples[:n]
+
+
 def prepare_batch_input(batch: list[ActivationSample], mt: ModelandTokenizer):
     """
     tokenizes the questions in the batch and returns the placeholder index
@@ -68,12 +90,14 @@ def get_train_eval_loaders(
     ood_act_batch_paths = list(
         get_batch_paths(os.path.join(latent_dir, ood_dataset_group))
     )
+    logger.info(f"{len(ood_act_batch_paths)} OOD batch paths will be loaded")
     random.shuffle(ood_act_batch_paths)
     ood_act_loader = ActivationLoader(
         latent_cache_files=ood_act_batch_paths,
         batch_size=batch_size,
         shuffle=True,
         name="OODValidateLoader",
+        device=torch.device("cpu"),
     )
 
     id_act_batch_paths = []
@@ -83,9 +107,10 @@ def get_train_eval_loaders(
                 get_batch_paths(os.path.join(latent_dir, group_dir))
             )
     random.shuffle(id_act_batch_paths)
-    train_split = int(len(id_act_batch_paths) * 0.8)
+    train_split = int(len(id_act_batch_paths) * 0.9)
     train_act_batch_paths = id_act_batch_paths[:train_split]
     id_val_act_batch_paths = id_act_batch_paths[train_split:]
+    logger.info(f"{len(id_val_act_batch_paths)} ID batch paths will be loaded")
 
     train_act_loader = ActivationLoader(
         latent_cache_files=train_act_batch_paths,
@@ -100,6 +125,7 @@ def get_train_eval_loaders(
         batch_size=batch_size,
         shuffle=True,
         name="IDValidateLoader",
+        device=torch.device("cpu"),
     )
 
     return train_act_loader, id_val_act_loader, ood_act_loader
