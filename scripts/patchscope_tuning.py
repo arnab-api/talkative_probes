@@ -64,11 +64,13 @@ def patchscope_finetune(
     batch_size=32,
     cached_latents_dir="cached_latents",
     eval_dataset: str = None,
+    device: str = "auto",
 ):
     # Initialize model and tokenizer
     mt = ModelandTokenizer(
         model_key=model_key,
         torch_dtype=torch.float32,
+        device_map=device,
     )
     latent_dir = os.path.join(
         env_utils.DEFAULT_RESULTS_DIR,
@@ -101,10 +103,10 @@ def patchscope_finetune(
     model.train()
     ############################## Hyperparameters ##############################
     learning_rate = 5e-5
-    log_steps = 100
+    log_steps = 250
     checkpoint_interval = 1000
     num_warmup_steps = 1000
-    limit_training_steps = 16000
+    limit_training_steps = 8000
     ############################################################################
     if wandb_logging:
         wandb.init(
@@ -284,6 +286,13 @@ if __name__ == "__main__":
         help="Evaluation dataset group.",
     )
 
+    parser.add_argument(
+        "--device",
+        type=str,
+        help="Which device to use. E.g. cuda:0, cuda:1, etc",
+        default="auto",
+    )
+
     args = parser.parse_args()
     logging_utils.configure(args)
     experiment_utils.setup_experiment(args)
@@ -296,4 +305,5 @@ if __name__ == "__main__":
         wandb_logging=args.wandb_logging,
         batch_size=args.batch_size,
         eval_dataset=args.eval,
+        device=args.device,
     )
