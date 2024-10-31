@@ -26,9 +26,7 @@ from src.dataset_manager import DatasetManager
 
 def cache_activations(
     model_key: str,
-    dataset_names: (
-        list[tuple[str, str]] | tuple[str, str]
-    ),  #! (group_name, dataset_name) => (relations, factual/country_capital)
+    dataset_group: str | None,
     interested_layer_indices: list[int] = list(range(5, 20)),
     latent_cache_dir: str = "cached_latents",
     batch_size: int = 32,
@@ -47,19 +45,13 @@ def cache_activations(
     )
     os.makedirs(cache_dir, exist_ok=True)
 
-    counter = 0
-
-    for group_name, dataset_name in dataset_names:
+    dataset_groups = DatasetManager.list_datasets_by_group(dataset_group)
+    for group_name in dataset_groups:
         group_dir = os.path.join(cache_dir, group_name)
         os.makedirs(group_dir, exist_ok=True)
 
-        data_dir = os.path.join(group_dir, dataset_name)
-        os.makedirs(data_dir, exist_ok=True)
-
-        dataloader = DatasetManager.from_named_datasets(
-            [(group_name, dataset_name)],
-            batch_size=batch_size,
-        )
+        counter = 0
+        dataloader = DatasetManager.from_dataset_group(group_name, batch_size=batch_size)
 
         if group_name in ["language_identification", "ag_news"]:
             tokenization_kwargs = {
@@ -72,7 +64,7 @@ def cache_activations(
                 "padding": "longest",
             }
 
-        for batch_idx, batch in tqdm(enumerate(dataloader)):
+        for batch_idx, batch in enumerate(tqdm(dataloader)):
             prompts = [context_qa.context for context_qa in batch]
             questions = [context_qa.questions for context_qa in batch]
             answers = [context_qa.answers for context_qa in batch]
@@ -95,7 +87,7 @@ def cache_activations(
             lcc = LatentCacheCollection(latents=latents)
             lcc.detensorize()
 
-            with open(os.path.join(data_dir, f"batch_{batch_idx}.json"), "w") as f:
+            with open(os.path.join(group_dir, f"batch_{batch_idx}.json"), "w") as f:
                 f.write(lcc.to_json())
 
             counter += len(latents)
@@ -103,7 +95,7 @@ def cache_activations(
                 break
 
         logger.info(
-            f"|>> done caching activations for {group_name=} {dataset_name=} in {data_dir}"
+            f"|>> done caching activations for {group_name=} in {group_dir}"
         )
 
     logger.info(f"cached {counter} samples in {cache_dir}")
@@ -118,17 +110,6 @@ if __name__ == "__main__":
         type=str,
         help="The model to use for caching activations.",
         default="meta-llama/Llama-3.2-3B",
-    )
-    parser.add_argument(
-        "--dataset",
-        type=str,
-        nargs="+",
-        help="The dataset to use for caching activations.",
-        default=[
-            "relations|factual/country_capital_city",
-            "sst2|sst2",
-            "geometry_of_truth|cities",
-        ],
     )
     parser.add_argument(
         "--dataset_group",
@@ -166,24 +147,14 @@ if __name__ == "__main__":
     experiment_utils.setup_experiment(args)
     logger.info(args)
 
-    assert args.dataset_group is not None or len(args.dataset) > 0
     interested_layers_range = args.interested_layers.split("-")
     interested_layers = list(
         range(int(interested_layers_range[0]), int(interested_layers_range[1]) + 1)
     )
-    if args.dataset_group is not None:
-        dataset_names = [
-            (args.dataset_group, d_name)
-            for d_name in DatasetManager.list_datasets_by_group()[args.dataset_group]
-        ]
-    else:
-        dataset_names = [tuple(d.split("|")) for d in args.dataset]
-
-    logger.info(f"{dataset_names=}")
 
     cache_activations(
         model_key=args.model,
-        dataset_names=dataset_names,
+        dataset_group=args.dataset_group,
         interested_layer_indices=interested_layers,
         batch_size=args.batch_size,
         latent_cache_dir=args.latent_cache_dir,

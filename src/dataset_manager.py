@@ -281,10 +281,10 @@ class GeometryOfTruthDatasetLoader(DatasetLoader):
         "sp_en_trans",
         # "neg_sp_en_trans",
         "cities",
-        "neg_cities",
+        # "neg_cities",
         "smaller_than",
         "larger_than",
-        "common_claim_true_false",
+        # "common_claim_true_false",
         "companies_true_false",
         # "counterfact_true_false",
     ]
