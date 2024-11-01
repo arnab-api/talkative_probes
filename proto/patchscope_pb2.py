@@ -24,25 +24,21 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10patchscope.proto\"@\n\x10PatchscopeConfig\x12\x15\n\rsource_layers\x18\x01 \x03(\x05\x12\x15\n\rtarget_layers\x18\x02 \x03(\x05\"\x1d\n\rDecoderConfig\x12\x0c\n\x04name\x18\x01 \x01(\t\"\x95\x02\n\x10\x45valuationConfig\x12\x11\n\tmodel_key\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61taset\x18\x02 \x01(\t\x12\x15\n\rtarget_prompt\x18\x03 \x01(\t\x12;\n\x0elabel_to_token\x18\x04 \x03(\x0b\x32#.EvaluationConfig.LabelToTokenEntry\x12,\n\x11patchscope_config\x18\x05 \x01(\x0b\x32\x11.PatchscopeConfig\x12&\n\x0e\x64\x65\x63oder_config\x18\x06 \x01(\x0b\x32\x0e.DecoderConfig\x1a\x33\n\x11LabelToTokenEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"\x8c\x01\n\x10\x45valuationResult\x12\x17\n\x0fresult_set_name\x18\x01 \x01(\t\x12!\n\x06\x63onfig\x18\x02 \x01(\x0b\x32\x11.EvaluationConfig\x12\x10\n\x08\x61\x63\x63uracy\x18\x03 \x01(\x01\x12\x13\n\x0bnum_correct\x18\x04 \x01(\x03\x12\x15\n\rnum_evaluated\x18\x05 \x01(\x03\"7\n\x11\x45valuationResults\x12\"\n\x07results\x18\x01 \x03(\x0b\x32\x11.EvaluationResultb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10patchscope.proto\"@\n\x10PatchscopeConfig\x12\x15\n\rsource_layers\x18\x01 \x03(\x05\x12\x15\n\rtarget_layers\x18\x02 \x03(\x05\"\x1d\n\rDecoderConfig\x12\x0c\n\x04name\x18\x01 \x01(\t\"\xca\x01\n\x10\x45valuationConfig\x12\x11\n\tmodel_key\x18\x01 \x01(\t\x12\x0f\n\x07\x64\x61taset\x18\x02 \x01(\t\x12\x15\n\rprompt_format\x18\x07 \x01(\t\x12\x19\n\x11interested_tokens\x18\x08 \x03(\t\x12,\n\x11patchscope_config\x18\x05 \x01(\x0b\x32\x11.PatchscopeConfig\x12&\n\x0e\x64\x65\x63oder_config\x18\x06 \x01(\x0b\x32\x0e.DecoderConfigJ\x04\x08\x03\x10\x04J\x04\x08\x04\x10\x05\"\x8c\x01\n\x10\x45valuationResult\x12\x17\n\x0fresult_set_name\x18\x01 \x01(\t\x12!\n\x06\x63onfig\x18\x02 \x01(\x0b\x32\x11.EvaluationConfig\x12\x10\n\x08\x61\x63\x63uracy\x18\x03 \x01(\x01\x12\x13\n\x0bnum_correct\x18\x04 \x01(\x03\x12\x15\n\rnum_evaluated\x18\x05 \x01(\x03\"7\n\x11\x45valuationResults\x12\"\n\x07results\x18\x01 \x03(\x0b\x32\x11.EvaluationResultb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'patchscope_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
-  _globals['_EVALUATIONCONFIG_LABELTOTOKENENTRY']._loaded_options = None
-  _globals['_EVALUATIONCONFIG_LABELTOTOKENENTRY']._serialized_options = b'8\001'
   _globals['_PATCHSCOPECONFIG']._serialized_start=20
   _globals['_PATCHSCOPECONFIG']._serialized_end=84
   _globals['_DECODERCONFIG']._serialized_start=86
   _globals['_DECODERCONFIG']._serialized_end=115
   _globals['_EVALUATIONCONFIG']._serialized_start=118
-  _globals['_EVALUATIONCONFIG']._serialized_end=395
-  _globals['_EVALUATIONCONFIG_LABELTOTOKENENTRY']._serialized_start=344
-  _globals['_EVALUATIONCONFIG_LABELTOTOKENENTRY']._serialized_end=395
-  _globals['_EVALUATIONRESULT']._serialized_start=398
-  _globals['_EVALUATIONRESULT']._serialized_end=538
-  _globals['_EVALUATIONRESULTS']._serialized_start=540
-  _globals['_EVALUATIONRESULTS']._serialized_end=595
+  _globals['_EVALUATIONCONFIG']._serialized_end=320
+  _globals['_EVALUATIONRESULT']._serialized_start=323
+  _globals['_EVALUATIONRESULT']._serialized_end=463
+  _globals['_EVALUATIONRESULTS']._serialized_start=465
+  _globals['_EVALUATIONRESULTS']._serialized_end=520
 # @@protoc_insertion_point(module_scope)
