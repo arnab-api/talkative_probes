@@ -50,7 +50,13 @@ class PatchscopeRunner():
             self.config.target_layers.extend(self.config.source_layers)
         assert len(self.config.source_layers) <= len(self.config.target_layers)
 
-        source_input = tokens.prepare_input(source_prompts, self.encoder_mt)
+        source_input = tokens.prepare_input(
+            source_prompts,
+            self.encoder_mt,
+            padding = "max_length",
+            padding_side = "left",
+            max_length = 200,
+            truncation = True)
 
         source_hs = get_source_hs(self.encoder_mt, source_input, self.config.source_layers)
         target_hs = {}
