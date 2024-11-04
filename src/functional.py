@@ -9,16 +9,16 @@ from dataclasses import dataclass
 from typing import Any, Literal, Optional, Union
 
 import torch
+
 # from anthropic import Anthropic
 # from openai import OpenAI
 from tqdm import tqdm
 
 from src.models import ModelandTokenizer, is_llama_variant
-from src.tokens import (find_all_single_token_positions, find_token_range,
-                        prepare_input)
+from src.tokens import find_all_single_token_positions, find_token_range, prepare_input
+
 # from src.utils.env_utils import CLAUDE_CACHE_DIR, GPT_4O_CACHE_DIR
-from src.utils.typing import (LatentCache, PredictedToken, Tokenizer,
-                              TokenizerOutput)
+from src.utils.typing import LatentCache, PredictedToken, Tokenizer, TokenizerOutput
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ def logit_lens(
 ):
     with mt.trace(get_dummy_input(mt), scan=True, validate=True) as trace:
         lnf = get_module_nnsight(mt, mt.final_layer_norm_name)
-        lnf.input = h.view(h.shape[0], 1, -1)
+        lnf.input = h.view(1, 1, h.squeeze().shape[0])
         logits = mt.output.logits.save()
 
     logits = logits.squeeze()
