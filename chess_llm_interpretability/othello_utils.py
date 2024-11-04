@@ -1,6 +1,6 @@
 import torch as t
 from datasets import load_dataset
-from othello_engine_utils import OthelloBoardState, stoi, itos
+from othello_engine_utils import OthelloBoardState, itos, stoi
 
 
 def board_state_to_RRC(board_state, flip: int = 1):

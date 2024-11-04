@@ -2,17 +2,17 @@ import argparse
 import logging
 import os
 import time
+from typing import Optional
 
 import torch
 import transformers
+from tqdm import tqdm
+from transformers import get_linear_schedule_with_warmup
+
 from src.functional import get_batch_concept_activations
 from src.models import ModelandTokenizer
 from src.utils import env_utils, experiment_utils, logging_utils
-from transformers import get_linear_schedule_with_warmup
-from tqdm import tqdm
 from src.utils.typing import LatentCacheCollection
-from typing import Optional
-
 
 logger = logging.getLogger(__name__)
 logger.info(f"{torch.__version__=}, {torch.version.cuda=}")

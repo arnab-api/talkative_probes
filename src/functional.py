@@ -1,3 +1,4 @@
+import copy
 import gc
 import hashlib
 import json
@@ -8,17 +9,15 @@ from dataclasses import dataclass
 from typing import Any, Literal, Optional, Union
 
 import torch
-import copy
-
 # from anthropic import Anthropic
 # from openai import OpenAI
 from tqdm import tqdm
 
 from src.models import ModelandTokenizer, is_llama_variant
 from src.tokens import find_token_range, prepare_input
-
 # from src.utils.env_utils import CLAUDE_CACHE_DIR, GPT_4O_CACHE_DIR
-from src.utils.typing import PredictedToken, Tokenizer, TokenizerOutput, LatentCache
+from src.utils.typing import (LatentCache, PredictedToken, Tokenizer,
+                              TokenizerOutput)
 
 logger = logging.getLogger(__name__)
 
@@ -201,7 +200,9 @@ def predict_next_token(
         if "offset_mapping" in inputs:
             inputs.pop("offset_mapping")
     else:
-        inputs = prepare_input(prompts=inputs, tokenizer=mt.tokenizer)
+        inputs = prepare_input(
+            prompts=inputs, tokenizer=mt.tokenizer, padding_side="left"
+        )
     if token_of_interest is not None:
         token_of_interest = (
             [token_of_interest]
@@ -648,6 +649,7 @@ def get_batch_concept_activations(
     check_prediction: list[str] | None = None,
     on_token_occur: tuple[str, int] | None = None,  # (tok, occur) =>
     tokenization_kwargs: Optional[dict[str, Any]] = None,
+    device: str = None,
 ) -> list[LatentCache]:
     """
     Get the concept activations for a batch of prompts
@@ -666,6 +668,9 @@ def get_batch_concept_activations(
         padding_side="left",  # always left padding as we are interested in the last token
         **(tokenization_kwargs or {}),
     )
+
+    # print(batch_inputs["input_ids"].shape)
+    device = device or mt.device
 
     token_idx = -1
     activations = []
@@ -700,6 +705,10 @@ def get_batch_concept_activations(
             logits=logit,
             k=2,
         )[0]
-        latent_cache.latents = {k: v.detach() for k, v in latent_cache.latents.items()}
+        latent_cache.latents = {
+            k: v.detach().to(device) for k, v in latent_cache.latents.items()
+        }
 
+    del logits
+    free_gpu_cache()
     return activations

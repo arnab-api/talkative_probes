@@ -1,6 +1,7 @@
-import pandas as pd
 import json
 import os
+
+import pandas as pd
 
 ROOT = '/home/ubuntu/statement_reps/datasets'
 

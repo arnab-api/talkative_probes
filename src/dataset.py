@@ -1,5 +1,5 @@
-import json
 import csv
+import json
 import logging
 import os
 import random
@@ -9,14 +9,12 @@ from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import Optional, Sequence
 
+import pandas as pd
 from dataclasses_json import DataClassJsonMixin
 from torch.utils.data import Dataset
 
 from src.utils.env_utils import DEFAULT_DATA_DIR
 from src.utils.typing import PathLike
-
-import pandas as pd
-
 
 logger = logging.getLogger(__name__)
 

@@ -1,23 +1,24 @@
 import argparse
 import logging
 import os
+import random
+import shutil
+from typing import Literal
+
+import baukit
 import torch
 import transformers
-from src.functional import get_module_nnsight, free_gpu_cache, interpret_logits
-from src.models import ModelandTokenizer
-from src.utils import env_utils, experiment_utils, logging_utils
-import shutil
-from transformers import get_linear_schedule_with_warmup
-import wandb
 from tqdm import tqdm
-import random
-from src.utils import env_utils
-import baukit
-from src.activation_manager import ActivationLoader, ActivationSample, get_batch_paths
-from src.tokens import prepare_input, find_token_range
-from src.functional import free_gpu_cache
+from transformers import get_linear_schedule_with_warmup
+
+import wandb
+from src.activation_manager import (ActivationLoader, ActivationSample,
+                                    get_batch_paths)
 from src.dataset_manager import DatasetManager
-from typing import Literal
+from src.functional import free_gpu_cache, get_module_nnsight, interpret_logits
+from src.models import ModelandTokenizer
+from src.tokens import find_token_range, prepare_input
+from src.utils import env_utils, experiment_utils, logging_utils
 
 logger = logging.getLogger(__name__)
 
@@ -183,7 +184,7 @@ def evaluate(
             step += 1
             if step % logging_steps == 0:
                 logger.info(
-                    f"Accuracy={correct_count/total_count}({correct_count}/{total_count})"
+                    f"{ActivationLoader.name} >> Accuracy={correct_count/total_count}({correct_count}/{total_count})"
                 )
 
     else:

@@ -11,7 +11,6 @@ import transformers.modeling_outputs
 from dataclasses_json import DataClassJsonMixin
 from nnsight import LanguageModel
 
-
 ArrayLike = list | tuple | numpy.ndarray | torch.Tensor
 PathLike = str | pathlib.Path
 Device = str | torch.device

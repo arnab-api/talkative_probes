@@ -1,23 +1,21 @@
-import torch
-from fancy_einsum import einsum
-import chess
-from dataclasses import dataclass, field, fields
-import pickle
-import logging
-from functools import partial
-from enum import Enum
-import json
-
-import chess_utils
-import train_test_chess
-
-from jaxtyping import Int, Float, jaxtyped
-from torch import Tensor
-from beartype import beartype
-
 import cProfile
-import pstats
 import io
+import json
+import logging
+import pickle
+import pstats
+from dataclasses import dataclass, field, fields
+from enum import Enum
+from functools import partial
+
+import chess
+import chess_utils
+import torch
+import train_test_chess
+from beartype import beartype
+from fancy_einsum import einsum
+from jaxtyping import Float, Int, jaxtyped
+from torch import Tensor
 
 torch.set_grad_enabled(False)
 

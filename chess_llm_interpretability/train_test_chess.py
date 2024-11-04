@@ -1,23 +1,23 @@
-from transformer_lens import HookedTransformer, HookedTransformerConfig
-import einops
-import torch
-from tqdm import tqdm
-from fancy_einsum import einsum
-from dataclasses import dataclass, field
-import pandas as pd
-import pickle
-import logging
-from typing import Optional
-from jaxtyping import Int, Float, jaxtyped
-from torch import Tensor
-from beartype import beartype
+import argparse
 import collections
+import logging
+import pickle
+from dataclasses import dataclass, field
+from typing import Optional
 
 import chess_utils
+import einops
 import othello_engine_utils
 import othello_utils
-from chess_utils import PlayerColor, Config
-import argparse
+import pandas as pd
+import torch
+from beartype import beartype
+from chess_utils import Config, PlayerColor
+from fancy_einsum import einsum
+from jaxtyping import Float, Int, jaxtyped
+from torch import Tensor
+from tqdm import tqdm
+from transformer_lens import HookedTransformer, HookedTransformerConfig
 
 logger = logging.getLogger(__name__)
 

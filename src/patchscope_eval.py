@@ -1,13 +1,15 @@
 from dataclasses import dataclass
 from typing import Any
+
 from tqdm import tqdm
 
+import proto.patchscope_pb2 as patchscope_pb2
 import src.functional as functional
 import src.tokens as tokens
-from src.utils.typing import PredictedToken
-from src.models import ModelandTokenizer
-import proto.patchscope_pb2 as patchscope_pb2
 from src.dataset_manager import DatasetManager
+from src.models import ModelandTokenizer
+from src.utils.typing import PredictedToken
+
 
 def get_source_hs(mt, input_, layers):
     locations = [(mt.layer_name_format.format(layer), input_.input_ids.shape[1] - 1)

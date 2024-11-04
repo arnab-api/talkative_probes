@@ -1,14 +1,14 @@
-import json
-import os
-import math
-import random
 import csv
 import json
+import logging
+import math
+import os
+import random
 from dataclasses import dataclass
 from typing import Literal
-from datasets import load_dataset
-import logging
+
 import pandas as pd
+from datasets import load_dataset
 from tqdm import tqdm
 
 import src.utils.env_utils as env_utils
@@ -25,6 +25,7 @@ class ContextQASample:
     context: str
     questions: list[str]
     answers: list[str]
+    ds_label: str | None = None
 
     def __post_init__(self):
         for q, a in zip(self.questions, self.answers):
@@ -96,7 +97,12 @@ class MdGenderDatasetLoader(DatasetLoader):
             context = f"{text}\n\nThis text is about {entity}."
 
             result.append(
-                ContextQASample(context=context, questions=questions, answers=answers)
+                ContextQASample(
+                    context=context,
+                    questions=questions,
+                    answers=answers,
+                    ds_label=context_label,
+                )
             )
         return result
 
@@ -116,11 +122,8 @@ class SnliDatasetLoader(DatasetLoader):
             if example["label"] not in (0, 2):
                 # skip neutral
                 continue
-            
-            answer = {
-                0: YES_TOKEN,
-                2: NO_TOKEN
-            }[example["label"]]
+
+            answer = {0: YES_TOKEN, 2: NO_TOKEN}[example["label"]]
 
             paraphrases = random.sample(self.question_paraphrases, NUM_QA_PER_SAMPLE)
             questions = []
@@ -128,11 +131,13 @@ class SnliDatasetLoader(DatasetLoader):
                 question = f"# {paraphrase} {example['hypothesis']}"
                 questions.append(question)
 
-            examples.append(ContextQASample(
-                context=example["premise"],
-                questions=questions,
-                answers=[answer] * NUM_QA_PER_SAMPLE
-            ))
+            examples.append(
+                ContextQASample(
+                    context=example["premise"],
+                    questions=questions,
+                    answers=[answer] * NUM_QA_PER_SAMPLE,
+                )
+            )
 
         return examples
 
@@ -179,7 +184,10 @@ class AgNewsDatasetLoader(DatasetLoader):
 
                 examples.append(
                     ContextQASample(
-                        context=context, questions=questions, answers=answers
+                        context=context,
+                        questions=questions,
+                        answers=answers,
+                        ds_label=label_to_topic[correct_label],
                     )
                 )
         return examples
@@ -306,7 +314,10 @@ class GeometryOfTruthDatasetLoader(DatasetLoader):
                 answers = [answer] * NUM_QA_PER_SAMPLE
 
                 example = ContextQASample(
-                    context=row["statement"], questions=questions, answers=answers
+                    context=row["statement"],
+                    questions=questions,
+                    answers=answers,
+                    ds_label=row["label"],
                 )
                 examples.append(example)
 
@@ -356,7 +367,10 @@ class SstDatasetLoader(DatasetLoader):
 
                 result.append(
                     ContextQASample(
-                        context=sentence.strip(), questions=questions, answers=answers
+                        context=sentence.strip(),
+                        questions=questions,
+                        answers=answers,
+                        ds_label=context_label,
                     )
                 )
         return result
@@ -461,6 +475,7 @@ class TenseDatasetLoader(DatasetLoader):
                     context=example["sentence"],
                     questions=questions,
                     answers=answers,
+                    ds_label=correct_label,
                 )
             )
 
@@ -512,6 +527,7 @@ class SingularPluralDatasetLoader(DatasetLoader):
                     context=example["sentence"],
                     questions=questions,
                     answers=answers,
+                    ds_label=example["n_subjects"],
                 )
             )
 
@@ -551,6 +567,7 @@ class LanguageIDDatasetLoader(DatasetLoader):
                     context=example["Text"],
                     questions=questions,
                     answers=answers,
+                    ds_label=correct_label,
                 )
             )
 

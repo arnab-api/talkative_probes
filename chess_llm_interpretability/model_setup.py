@@ -1,14 +1,10 @@
 # For nanogpt to transformer lens conversion
-import torch
-import einops
-
-import transformer_lens.utils as utils
-from transformer_lens import (
-    HookedTransformer,
-    HookedTransformerConfig,
-)
-
 import os
+
+import einops
+import torch
+import transformer_lens.utils as utils
+from transformer_lens import HookedTransformer, HookedTransformerConfig
 
 # Our pytorch model is in the nanogpt format. For easy linear probing of the residual stream, we want to convert
 # it to the transformer lens format. This is done in the following code block.

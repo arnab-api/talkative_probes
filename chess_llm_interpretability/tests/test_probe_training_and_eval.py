@@ -1,13 +1,13 @@
-import sys
 import os
+import sys
 
 # Not the ideal way of doing things, but it works. This way all test functions can pull models / probes / data from the expected location
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(parent_dir)
 
-import train_test_chess
-import torch
 import chess_utils
+import torch
+import train_test_chess
 
 DATA_DIR = "data/"
 

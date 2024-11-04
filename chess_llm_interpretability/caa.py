@@ -1,15 +1,15 @@
-import einops
-import torch
-from tqdm import tqdm
-import logging
 import itertools
-from transformer_lens import HookedTransformer
+import logging
 from functools import partial
 
-import train_test_chess
-from train_test_chess import LinearProbeData
 import chess_utils
+import einops
+import torch
+import train_test_chess
 from chess_utils import Config
+from tqdm import tqdm
+from train_test_chess import LinearProbeData
+from transformer_lens import HookedTransformer
 
 torch.set_grad_enabled(False)
 

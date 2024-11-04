@@ -1,24 +1,24 @@
 import argparse
 import logging
 import os
+import random
+import shutil
+from typing import Literal
+
+import baukit
 import torch
 import transformers
-from src.functional import get_module_nnsight, free_gpu_cache, interpret_logits
-from src.models import ModelandTokenizer
-from src.utils import env_utils, experiment_utils, logging_utils
-import shutil
-from transformers import get_linear_schedule_with_warmup
-import wandb
 from tqdm import tqdm
-import random
-from src.utils import env_utils
-import baukit
+from transformers import get_linear_schedule_with_warmup
+
+import wandb
 from src.activation_manager import ActivationLoader, ActivationSample, get_batch_paths
-from src.tokens import prepare_input, find_token_range
-from src.functional import free_gpu_cache
 from src.dataset_manager import DatasetManager
-from typing import Literal
-from src.train_utils import get_train_eval_loaders, evaluate, prepare_batch_input
+from src.functional import free_gpu_cache, get_module_nnsight, interpret_logits
+from src.models import ModelandTokenizer
+from src.tokens import find_token_range, prepare_input
+from src.train_utils import evaluate, get_train_eval_loaders, prepare_batch_input
+from src.utils import env_utils, experiment_utils, logging_utils
 
 logger = logging.getLogger(__name__)
 logger.info(f"{torch.__version__=}, {torch.version.cuda=}")
@@ -213,7 +213,10 @@ def patchscope_finetune(
     ood_validation_accuracy = evaluate(
         mt, ood_act_loader, batch_size, logging_steps=1000
     )
-    id_validation_accuracy = evaluate(mt, id_val_act_loader, batch_size)
+    print("-" * 100)
+    id_validation_accuracy = evaluate(
+        mt, id_val_act_loader, batch_size, logging_steps=1000
+    )
     logger.info(
         f"Finished training.... Validation Accuracy on full set (ID/OOD): {id_validation_accuracy} / {ood_validation_accuracy}"
     )

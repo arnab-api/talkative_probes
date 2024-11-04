@@ -1,7 +1,8 @@
-import pandas as pd
-import os
 import argparse
 import math
+import os
+
+import pandas as pd
 
 ROOT = '~/statement_reps/datasets'
 

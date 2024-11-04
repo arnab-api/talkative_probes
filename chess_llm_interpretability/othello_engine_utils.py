@@ -1,17 +1,18 @@
 # Copy of https://github.com/likenneth/othello_world/blob/master/mechanistic_interpretability/mech_interp_othello_utils.py
 
 # %%
-import os
 import math
+import os
 import time
-from tqdm import tqdm
-import numpy as np
 from copy import deepcopy
+from functools import partial
+
+import numpy as np
 import torch
 import torch.nn as nn
-from torch.nn import functional as F
-from functools import partial
 from matplotlib.pyplot import imshow
+from torch.nn import functional as F
+from tqdm import tqdm
 
 torch.set_grad_enabled(True)
 # A class to calculate the Othello Board State, shamelessly ripped from Kenneth Li's code base
