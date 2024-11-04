@@ -1,3 +1,4 @@
+import time
 import argparse
 import logging
 import os
@@ -63,11 +64,13 @@ def patchscope_finetune(
     batch_size=32,
     cached_latents_dir="cached_latents",
     eval_dataset: str = None,
+    device: str = "auto",
 ):
     # Initialize model and tokenizer
     mt = ModelandTokenizer(
         model_key=model_key,
         torch_dtype=torch.float32,
+        device_map=device,
     )
     latent_dir = os.path.join(
         env_utils.DEFAULT_RESULTS_DIR,
@@ -77,8 +80,20 @@ def patchscope_finetune(
 
     ############################## Load Activation Loader ##############################
     train_act_loader, id_val_act_loader, ood_act_loader = get_train_eval_loaders(
-        latent_dir=latent_dir, ood_dataset_group=eval_dataset, batch_size=batch_size
+        latent_dir=latent_dir,
+        ood_dataset_group=eval_dataset,
+        batch_size=batch_size,
+        device=None if device == "auto" else device,
     )
+    logger.info("Loading out-of-distribution validation set...")
+    start = time.time()
+    ood_act_rotator = RotatingLoader(ood_act_loader, 1000)
+    logger.info(f"Done in {time.time() - start}")
+
+    logger.info("Loading in-distribution validation set...")
+    start = time.time()
+    id_val_act_rotator = RotatingLoader(id_val_act_loader, 1000)
+    logger.info(f"Done in {time.time() - start}")
     ###################################################################################
     checkpoint_save_dir = os.path.join(
         env_utils.DEFAULT_RESULTS_DIR,
@@ -91,10 +106,10 @@ def patchscope_finetune(
     model.train()
     ############################## Hyperparameters ##############################
     learning_rate = 5e-5
-    log_steps = 100
+    log_steps = 250
     checkpoint_interval = 1000
     num_warmup_steps = 1000
-    limit_training_steps = 16000
+    limit_training_steps = 8000
     ############################################################################
     if wandb_logging:
         wandb.init(
@@ -184,10 +199,8 @@ def patchscope_finetune(
         free_gpu_cache()
 
         if (step + 1) % log_steps == 0:
-            id_eval_batch = get_small_validation_set(id_val_act_loader, 1000)
-            ood_eval_batch = get_small_validation_set(ood_act_loader, 1000)
-            id_eval_accuracy = evaluate(mt, id_eval_batch)
-            ood_eval_accuracy = evaluate(mt, ood_eval_batch)
+            id_eval_accuracy = evaluate(mt, id_val_act_rotator.next_batch())
+            ood_eval_accuracy = evaluate(mt, ood_act_rotator.next_batch())
             log_data = {
                 "loss": loss.item(),
                 "learning_rate": scheduler.get_last_lr()[0],
@@ -211,12 +224,9 @@ def patchscope_finetune(
             model.save_pretrained(new_checkpoint_path)
 
     ood_validation_accuracy = evaluate(
-        mt, ood_act_loader, batch_size, logging_steps=1000
+        mt, ood_act_rotator.get_n(10000), batch_size, logging_steps=1000
     )
-    print("-" * 100)
-    id_validation_accuracy = evaluate(
-        mt, id_val_act_loader, batch_size, logging_steps=1000
-    )
+    id_validation_accuracy = evaluate(mt, id_val_act_rotator.get_n(10000), batch_size)
     logger.info(
         f"Finished training.... Validation Accuracy on full set (ID/OOD): {id_validation_accuracy} / {ood_validation_accuracy}"
     )
@@ -279,6 +289,13 @@ if __name__ == "__main__":
         help="Evaluation dataset group.",
     )
 
+    parser.add_argument(
+        "--device",
+        type=str,
+        help="Which device to use. E.g. cuda:0, cuda:1, etc",
+        default="auto",
+    )
+
     args = parser.parse_args()
     logging_utils.configure(args)
     experiment_utils.setup_experiment(args)
@@ -291,4 +308,5 @@ if __name__ == "__main__":
         wandb_logging=args.wandb_logging,
         batch_size=args.batch_size,
         eval_dataset=args.eval,
+        device=args.device,
     )

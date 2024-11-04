@@ -2,7 +2,7 @@ import argparse
 import logging
 import os
 import time
-from typing import Optional
+import pickle
 
 import torch
 import transformers
@@ -31,11 +31,14 @@ def cache_activations(
     latent_cache_dir: str = "cached_latents",
     batch_size: int = 32,
     limit_samples: Optional[int] = None,
+    use_pickle: bool = False,
+    device: str = "auto",
 ):
     # Initialize model and tokenizer
     mt = ModelandTokenizer(
         model_key=model_key,
         torch_dtype=torch.float32,
+        device_map=device,
     )
 
     cache_dir = os.path.join(
@@ -89,8 +92,12 @@ def cache_activations(
             lcc = LatentCacheCollection(latents=latents)
             lcc.detensorize()
 
-            with open(os.path.join(group_dir, f"batch_{batch_idx}.json"), "w") as f:
-                f.write(lcc.to_json())
+            if use_pickle:
+                with open(os.path.join(group_dir, f"batch_{batch_idx}.pkl"), "wb") as f:
+                    pickle.dump(lcc, f)
+            else:
+                with open(os.path.join(group_dir, f"batch_{batch_idx}.json"), "w") as f:
+                    f.write(lcc.to_json())
 
             counter += len(latents)
             if limit_samples is not None and counter >= limit_samples:
@@ -141,6 +148,18 @@ if __name__ == "__main__":
         help="The maximum number of samples to cache.",
         default=20000,
     )
+    parser.add_argument(
+        "--use_pickle",
+        type=bool,
+        help="Whether to use pickle to write files. Otherwise use json.",
+        default=False,
+    )
+    parser.add_argument(
+        "--device",
+        type=str,
+        help="Which device to use. E.g. cuda:0, cuda:1, etc",
+        default="auto",
+    )
 
     args = parser.parse_args()
     logging_utils.configure(args)
@@ -159,4 +178,6 @@ if __name__ == "__main__":
         batch_size=args.batch_size,
         latent_cache_dir=args.latent_cache_dir,
         limit_samples=args.limit_samples,
+        use_pickle=args.use_pickle,
+        device=args.device,
     )

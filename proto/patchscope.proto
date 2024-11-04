@@ -16,6 +16,8 @@ message DecoderConfig {
 message EvaluationConfig {
   string model_key = 1;
   string dataset = 2;
+  string prompt_format = 7;
+  repeated string interested_tokens = 8;
   PatchscopeConfig patchscope_config = 5;
   DecoderConfig decoder_config = 6;
 

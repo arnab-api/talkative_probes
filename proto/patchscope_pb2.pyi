@@ -25,27 +25,20 @@ class DecoderConfig(_message.Message):
     def __init__(self, name: _Optional[str] = ...) -> None: ...
 
 class EvaluationConfig(_message.Message):
-    __slots__ = ("model_key", "dataset", "target_prompt", "label_to_token", "patchscope_config", "decoder_config")
-    class LabelToTokenEntry(_message.Message):
-        __slots__ = ("key", "value")
-        KEY_FIELD_NUMBER: _ClassVar[int]
-        VALUE_FIELD_NUMBER: _ClassVar[int]
-        key: str
-        value: str
-        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
+    __slots__ = ("model_key", "dataset", "prompt_format", "interested_tokens", "patchscope_config", "decoder_config")
     MODEL_KEY_FIELD_NUMBER: _ClassVar[int]
     DATASET_FIELD_NUMBER: _ClassVar[int]
-    TARGET_PROMPT_FIELD_NUMBER: _ClassVar[int]
-    LABEL_TO_TOKEN_FIELD_NUMBER: _ClassVar[int]
+    PROMPT_FORMAT_FIELD_NUMBER: _ClassVar[int]
+    INTERESTED_TOKENS_FIELD_NUMBER: _ClassVar[int]
     PATCHSCOPE_CONFIG_FIELD_NUMBER: _ClassVar[int]
     DECODER_CONFIG_FIELD_NUMBER: _ClassVar[int]
     model_key: str
     dataset: str
-    target_prompt: str
-    label_to_token: _containers.ScalarMap[str, str]
+    prompt_format: str
+    interested_tokens: _containers.RepeatedScalarFieldContainer[str]
     patchscope_config: PatchscopeConfig
     decoder_config: DecoderConfig
-    def __init__(self, model_key: _Optional[str] = ..., dataset: _Optional[str] = ..., target_prompt: _Optional[str] = ..., label_to_token: _Optional[_Mapping[str, str]] = ..., patchscope_config: _Optional[_Union[PatchscopeConfig, _Mapping]] = ..., decoder_config: _Optional[_Union[DecoderConfig, _Mapping]] = ...) -> None: ...
+    def __init__(self, model_key: _Optional[str] = ..., dataset: _Optional[str] = ..., prompt_format: _Optional[str] = ..., interested_tokens: _Optional[_Iterable[str]] = ..., patchscope_config: _Optional[_Union[PatchscopeConfig, _Mapping]] = ..., decoder_config: _Optional[_Union[DecoderConfig, _Mapping]] = ...) -> None: ...
 
 class EvaluationResult(_message.Message):
     __slots__ = ("result_set_name", "config", "accuracy", "num_correct", "num_evaluated")

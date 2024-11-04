@@ -56,7 +56,7 @@ class MdGenderDatasetLoader(DatasetLoader):
         super().__init__(self.__class__.GROUP_NAME, self.__class__.DATASET_NAME)
 
     def load(self):
-        dataset = load_dataset("facebook/md_gender_bias", name="funpedia")
+        dataset = load_dataset("facebook/md_gender_bias", name="funpedia", trust_remote_code=True)
         all_examples = []
         female_count = 0
         for split in ("train", "validation", "test"):

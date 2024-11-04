@@ -9,15 +9,16 @@ from dataclasses import dataclass
 from typing import Any, Literal, Optional, Union
 
 import torch
+
 # from anthropic import Anthropic
 # from openai import OpenAI
 from tqdm import tqdm
 
 from src.models import ModelandTokenizer, is_llama_variant
-from src.tokens import find_token_range, prepare_input
+from src.tokens import find_token_range, prepare_input, find_all_single_token_positions
+
 # from src.utils.env_utils import CLAUDE_CACHE_DIR, GPT_4O_CACHE_DIR
-from src.utils.typing import (LatentCache, PredictedToken, Tokenizer,
-                              TokenizerOutput)
+from src.utils.typing import LatentCache, PredictedToken, Tokenizer, TokenizerOutput
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +57,7 @@ def logit_lens(
 ):
     with mt.trace(get_dummy_input(mt), scan=True, validate=True) as trace:
         lnf = get_module_nnsight(mt, mt.final_layer_norm_name)
-        lnf.input = h.view(1, 1, h.squeeze().shape[0])
+        lnf.input = h.view(h.shape[0], 1, -1)
         logits = mt.output.logits.save()
 
     logits = logits.squeeze()
@@ -85,32 +86,25 @@ def logit_lens(
 def patchscope(
     mt: ModelandTokenizer,
     hs: dict[str, torch.Tensor],
-    target_prompt: str,
+    target_prompts: list[str],
     placeholder_token: str = "placeholder",
-    interested_tokens: tuple[int] = (),
-    k: int = 5,
-) -> (
-    list[PredictedToken]
-    | tuple[list[PredictedToken], dict[int, tuple[int, PredictedToken]]]
-):
+) -> torch.Tensor:
     input = prepare_input(
         tokenizer=mt,
-        prompts=target_prompt,
+        prompts=target_prompts,
         return_offsets_mapping=True,
     )
+    tokens_to_find = [placeholder_token, " " + placeholder_token]
+    token_ids_to_find = [mt.tokenizer.encode(tok)[-1] for tok in tokens_to_find]
+    placeholder_positions = find_all_single_token_positions(
+        input.input_ids, token_ids_to_find
+    )
+
     patches = []
-    for i in range(target_prompt.count(placeholder_token)):
+    for b, placeholder_pos in placeholder_positions:
         for layer, h in hs.items():
-            placeholder_range = find_token_range(
-                string=target_prompt,
-                substring=placeholder_token,
-                tokenizer=mt,
-                occurrence=i,
-                offset_mapping=input["offset_mapping"][0],
-            )
-            placeholder_pos = placeholder_range[1] - 1
             logger.debug(
-                f"placeholder position: {placeholder_pos} | token: {mt.tokenizer.decode(input['input_ids'][0, placeholder_pos])}"
+                f"placeholder position: {placeholder_pos} | token: {mt.tokenizer.decode(input.input_ids[b, placeholder_pos])}"
             )
             patches.append(
                 PatchSpec(
@@ -118,6 +112,7 @@ def patchscope(
                     patch=h,
                 )
             )
+
     input.pop("offset_mapping")
 
     processed_h = get_hs(
@@ -127,12 +122,14 @@ def patchscope(
         patches=patches,
         return_dict=False,
     )
-    return logit_lens(
-        mt=mt,
-        h=processed_h,
-        interested_tokens=interested_tokens,
-        k=k,
-    )
+    if processed_h.ndim == 1:
+        processed_h.unsqueeze_(0)
+    with mt.trace(get_dummy_input(mt), scan=True, validate=True) as trace:
+        lnf = get_module_nnsight(mt, mt.final_layer_norm_name)
+        lnf.input = processed_h.view(processed_h.shape[0], 1, -1)
+        logits = mt.output.logits.save()
+
+    return logits.squeeze()
 
 
 def untuple(object: Any):
@@ -334,7 +331,7 @@ def get_hs(
                     if ("mlp" in module_name or module_name == mt.embedder_name)
                     else module.output[0].save()
                 )
-                current_state[0, index, :] = cur_patch.patch
+                current_state[:, index, :] = cur_patch.patch
 
         for layer_name in layer_names:
             if is_an_attn_head(layer_name) == False:

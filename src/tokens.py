@@ -122,6 +122,13 @@ def prepare_input(
     return inputs
 
 
+def find_all_single_token_positions(input_ids, token_ids_to_find):
+    bools = torch.zeros_like(input_ids, dtype=torch.bool)
+    for token_id in token_ids_to_find:
+        bools |= (input_ids == token_id)
+    return torch.argwhere(bools)
+
+
 def find_token_range(
     string: str,
     substring: str,

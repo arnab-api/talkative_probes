@@ -29,6 +29,7 @@ class ModelandTokenizer(LanguageModel):
             str
         ] = "EleutherAI/gpt-j-6B",  # if model is provided, this will be ignored and rewritten
         torch_dtype=torch.float16,
+        device_map="auto",
     ) -> None:
         assert (
             base_lm is not None or model_key is not None
@@ -42,7 +43,7 @@ class ModelandTokenizer(LanguageModel):
             self.__dict__ = LanguageModel(
                 model_key=model_key,
                 torch_dtype=torch_dtype,
-                device_map="auto",
+                device_map=device_map,
                 dispatch=True,
             ).__dict__
             self.name = model_key
