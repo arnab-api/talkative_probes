@@ -9,17 +9,16 @@ from dataclasses import dataclass
 from typing import Any, Literal, Optional, Union
 
 import torch
-
-
 # from anthropic import Anthropic
 # from openai import OpenAI
 from tqdm import tqdm
 
 from src.models import ModelandTokenizer, is_llama_variant
-from src.tokens import find_all_single_token_positions, find_token_range, prepare_input
-
+from src.tokens import (find_all_single_token_positions, find_token_range,
+                        prepare_input)
 # from src.utils.env_utils import CLAUDE_CACHE_DIR, GPT_4O_CACHE_DIR
-from src.utils.typing import LatentCache, PredictedToken, Tokenizer, TokenizerOutput
+from src.utils.typing import (LatentCache, PredictedToken, Tokenizer,
+                              TokenizerOutput)
 
 logger = logging.getLogger(__name__)
 

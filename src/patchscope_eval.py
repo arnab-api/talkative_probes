@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import Any
 
-from tqdm import tqdm
 import torch
+from tqdm import tqdm
 
 import proto.patchscope_pb2 as patchscope_pb2
 import src.functional as functional
