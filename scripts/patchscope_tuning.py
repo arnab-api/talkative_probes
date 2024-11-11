@@ -1,9 +1,9 @@
+import time
 import argparse
 import logging
 import os
 import random
 import shutil
-import time
 from typing import Literal
 
 import baukit
@@ -18,12 +18,7 @@ from src.dataset_manager import DatasetManager
 from src.functional import free_gpu_cache, get_module_nnsight, interpret_logits
 from src.models import ModelandTokenizer
 from src.tokens import find_token_range, prepare_input
-from src.train_utils import (
-    RotatingLoader,
-    evaluate,
-    get_train_eval_loaders,
-    prepare_batch_input,
-)
+from src.train_utils import evaluate, get_train_eval_loaders, prepare_batch_input
 from src.utils import env_utils, experiment_utils, logging_utils
 
 logger = logging.getLogger(__name__)
